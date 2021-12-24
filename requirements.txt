@@ -1,5 +1,10 @@
 # ----------- nlp ----------- #
 allennlp~=2.8.0
+datasets~=1.16.1
+sacrebleu~=1.2.21
 
 # --------- linters --------- #
 pre-commit
+
+# --------- others ---------- #
+typing~=3.7.4.3
