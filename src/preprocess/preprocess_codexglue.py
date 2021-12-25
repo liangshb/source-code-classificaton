@@ -4,16 +4,9 @@ import os
 from codegen.cpp_processor import CppProcessor
 from datasets import Value, load_dataset, load_from_disk
 from normalizers import remove_comments, remove_empty_lines, remove_space_before_newline
+from tokenize_utils import tokenize_fn
 
 log = logging.getLogger(__name__)
-
-
-def tokenize_fn(encode_fn, example):
-    outputs = [encode_fn.get_tokens_and_types(func) for func in example["func"]]
-    return {
-        "tokens": [output[0] for output in outputs],
-        "tags": [output[1] for output in outputs],
-    }
 
 
 def get_codexglue(data_dir: str):
@@ -25,7 +18,7 @@ def get_codexglue(data_dir: str):
     return dataset
 
 
-def tokenized_codexglue(data_dir: str):
+def tokenize_codexglue(data_dir: str):
     save_path = os.path.join(data_dir, "code_x_glue_cc_defect_detection", "tokenized")
     if not os.path.exists(os.path.join(save_path, "train")):
         os.makedirs(save_path, exist_ok=True)
@@ -58,7 +51,7 @@ def tokenized_codexglue(data_dir: str):
 def main():
     root_path = "../../"
     print(os.path.abspath(os.path.join(root_path, "data")))
-    tokenized_codexglue(os.path.join(root_path, "data"))
+    tokenize_codexglue(os.path.join(root_path, "data"))
 
 
 if __name__ == "__main__":
