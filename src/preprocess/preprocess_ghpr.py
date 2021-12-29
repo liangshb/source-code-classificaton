@@ -2,50 +2,35 @@ import logging
 import os
 
 import pandas as pd
-from codegen.cpp_processor import CppProcessor
+from codegen.java_processor import JavaProcessor
 from datasets import Dataset, DatasetDict, load_from_disk
 from normalizers import remove_comments, remove_empty_lines, remove_space_before_newline
+from pandas import DataFrame
 from tokenize_utils import tokenize_fn
 
 log = logging.getLogger(__name__)
 
 
-def get_sysevr(data_dir: str):
-    vul_files = ["API_function_call", "Arithmetic_expression", "Array_usage", "Pointer_usage"]
-    save_path = os.path.join(data_dir, "sysevr", "raw_data")
+def get_ghpr(data_dir: str):
+    save_path = os.path.join(data_dir, "ghpr", "raw_data")
     if not os.path.exists(os.path.join(save_path, "train")):
-        for file in vul_files:
-            file_path = os.path.join(save_path, f"{file}.txt")
-            all_examples = []
-            with open(file_path) as fp:
-                v, nv = 0, 0
-                lines = fp.readlines()
-                example = []
-                for idx, line in enumerate(lines):
-                    if line.strip() == "":
-                        continue
-                    if "-------------------------" in line:
-                        if len(example) >= 3:
-                            code = "\n".join(example[1:-1])
-                            try:
-                                label = int(example[-1])
-                                if label == 0:
-                                    nv += 1
-                                else:
-                                    v += 1
-                                all_examples.append(
-                                    {
-                                        "code": code,
-                                        "label": label,
-                                    }
-                                )
-                            except ValueError:
-                                pass
-                            example = []
-                    else:
-                        example.append(line.strip())
-                log.info(v, nv)
-        df = pd.DataFrame(all_examples)
+        names = ["language", "old_code", "new_code"]
+        df: DataFrame = pd.read_csv(
+            os.path.join(save_path, "ghprdata.csv"),
+            names=names,
+            usecols=[4, 10, 11],
+        )
+        df = df[df["language"] == "Java"]
+        vul_series = df.pop("old_code")
+        non_vul_series = df.pop("new_code")
+        vul_df = pd.DataFrame(
+            {
+                "code": vul_series,
+                "label": 1,
+            }
+        )
+        non_vul_df = pd.DataFrame({"code": non_vul_series, "label": 0})
+        df = pd.concat([vul_df, non_vul_df])
         dataset = Dataset.from_pandas(df)
         train, test = dataset.train_test_split(test_size=0.2).values()
         val, test = test.train_test_split(test_size=0.5).values()
@@ -53,17 +38,18 @@ def get_sysevr(data_dir: str):
         dataset["train"] = train
         dataset["validation"] = val
         dataset["test"] = test
+        dataset = dataset.remove_columns(["__index_level_0__"])
         dataset.save_to_disk(save_path)
     else:
         dataset = load_from_disk(save_path)
     return dataset
 
 
-def tokenize_sysevr(data_dir: str):
-    save_path = os.path.join(data_dir, "sysevr", "tokenized")
+def tokenize_ghpr(data_dir: str):
+    save_path = os.path.join(data_dir, "ghpr", "tokenized")
     if not os.path.exists(os.path.join(save_path, "train")):
         os.makedirs(save_path, exist_ok=True)
-        dataset = get_sysevr(data_dir)
+        dataset = get_ghpr(data_dir)
         log.info("Processing dataset")
 
         # normalize
@@ -74,7 +60,7 @@ def tokenize_sysevr(data_dir: str):
         dataset = dataset.map(lambda example: {"code": remove_empty_lines(example["code"])})
 
         # tokenize
-        encode_fn = CppProcessor(
+        encode_fn = JavaProcessor(
             root_folder=os.path.join(data_dir, "..", "src", "preprocess"),
         )
         dataset = dataset.map(
@@ -94,7 +80,7 @@ def tokenize_sysevr(data_dir: str):
 def main():
     root_path = "../../"
     print(os.path.abspath(os.path.join(root_path, "data")))
-    tokenize_sysevr(os.path.join(root_path, "data"))
+    tokenize_ghpr(os.path.join(root_path, "data"))
 
 
 if __name__ == "__main__":

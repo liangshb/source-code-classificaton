@@ -6,8 +6,8 @@ from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from datasets import load_from_disk
 
 
-@DatasetReader.register("code_classification_datasets")
-class CodeClassificationDatasetsReader(DatasetReader):
+@DatasetReader.register("reader_tag")
+class ReaderTag(DatasetReader):
     def __init__(
         self,
         token_indexers: Dict[str, TokenIndexer] = None,
@@ -30,7 +30,7 @@ class CodeClassificationDatasetsReader(DatasetReader):
         self.label_key = label_key
 
     def text_to_instance(
-        self, tokens: List[str], tags: List[str] = None, label: Union[str, int] = None
+        self, tokens: List[str], tags: List[str], label: Union[str, int] = None
     ) -> Instance:
         fields: Dict[str, Field] = {}
         if self.max_sequence_length is not None:

@@ -10,12 +10,12 @@ from tokenize_utils import tokenize_fn
 log = logging.getLogger(__name__)
 
 
-def get_sysevr(data_dir: str):
-    vul_files = ["API_function_call", "Arithmetic_expression", "Array_usage", "Pointer_usage"]
-    save_path = os.path.join(data_dir, "sysevr", "raw_data")
+def get_vuldeepecker(data_dir: str):
+    save_path = os.path.join(data_dir, "vuldeepecker", "raw_data")
+    vul_files = [file for file in os.listdir(save_path) if file.endswith(".txt")]
     if not os.path.exists(os.path.join(save_path, "train")):
         for file in vul_files:
-            file_path = os.path.join(save_path, f"{file}.txt")
+            file_path = os.path.join(save_path, file)
             all_examples = []
             with open(file_path) as fp:
                 v, nv = 0, 0
@@ -59,11 +59,11 @@ def get_sysevr(data_dir: str):
     return dataset
 
 
-def tokenize_sysevr(data_dir: str):
-    save_path = os.path.join(data_dir, "sysevr", "tokenized")
+def tokenize_vuldeepecker(data_dir: str):
+    save_path = os.path.join(data_dir, "vuldeepecker", "tokenized")
     if not os.path.exists(os.path.join(save_path, "train")):
         os.makedirs(save_path, exist_ok=True)
-        dataset = get_sysevr(data_dir)
+        dataset = get_vuldeepecker(data_dir)
         log.info("Processing dataset")
 
         # normalize
@@ -94,7 +94,7 @@ def tokenize_sysevr(data_dir: str):
 def main():
     root_path = "../../"
     print(os.path.abspath(os.path.join(root_path, "data")))
-    tokenize_sysevr(os.path.join(root_path, "data"))
+    tokenize_vuldeepecker(os.path.join(root_path, "data"))
 
 
 if __name__ == "__main__":

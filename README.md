@@ -11,6 +11,13 @@ Source code classification
 ## Preprocess
 
 ## Datasets
+1. [CodeXGLUE](https://github.com/microsoft/CodeXGLUE)
+2. [D2A](https://github.com/IBM/D2A)
+3. [GHPR](https://github.com/feiwww/GHPR_dataset)
+4. [DeepWukong](https://github.com/DeepWukong/Dataset)
+5. [ReVeal](https://github.com/VulDetProject/ReVeal)
+6. [SySeVR](https://github.com/SySeVR/SySeVR)
+7. [VulDeePecker](https://github.com/CGCL-codes/VulDeePecker)
 
 ## Models
 
