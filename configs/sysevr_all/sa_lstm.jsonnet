@@ -1,17 +1,25 @@
 local batch_size = 64;
 local num_epochs = 100;
-local train_data_path = "data/code_x_glue_cc_defect_detection/tokenized/train";
-local validation_data_path = "data/code_x_glue_cc_defect_detection/tokenized/validation";
-local test_data_path = "data/code_x_glue_cc_defect_detection/tokenized/test";
+local train_data_path = "data/sysevr/tokenized/train";
+local validation_data_path = "data/sysevr/tokenized/validation";
+local test_data_path = "data/sysevr/tokenized/test";
 
 // hyperparameters
-local min_count = {"tokens": 3};
-local embedding_dim = 100;
-local dropout = 0.2;
-local lr = 0.001;
+local min_count = {"tokens": 5};
+local lr = 0.002;
 local weight_decay = 0.0005;
-local num_filters = 100;
-local ngram_filter_sizes = [4, 5, 6];
+
+// model
+local embedding_dim = 50;
+local pretrain_type = "fasttext";
+local pretrained_file = "data/sysevr/embedding/%s_%s.txt" % [pretrain_type, embedding_dim];
+local input_size = embedding_dim;
+local hidden_size = 100;
+local num_layers = 2;
+local rnn_dropout = 0.1;
+local use_highway = true;
+local use_input_projection_bias = true;
+local dropout = 0.1;
 
 {
   "dataset_reader": {
@@ -41,12 +49,15 @@ local ngram_filter_sizes = [4, 5, 6];
       }
     },
     "encoder": {
-      "type": "cnn",
-      "embedding_dim": embedding_dim,
-      "num_filters": num_filters,
-      "ngram_filter_sizes": ngram_filter_sizes,
+      "type": "alternating_lstm",
+      "input_size": input_size,
+      "hidden_size": hidden_size,
+      "num_layers": num_layers,
+      "recurrent_dropout_probability": rnn_dropout,
+      "use_highway": use_highway,
+      "use_input_projection_bias": use_input_projection_bias
     },
-    "dropout": 0.2
+    "dropout": dropout
   },
   "data_loader": {
     "batch_size": batch_size,
@@ -56,7 +67,7 @@ local ngram_filter_sizes = [4, 5, 6];
     "num_epochs": num_epochs,
     "patience": 10,
     "grad_norm": 5.0,
-    "validation_metric": "+accuracy",
+    "validation_metric": ["+mcc", "+auc", "+f1"],
     "optimizer": {
       "type": "adam",
       "lr": lr,

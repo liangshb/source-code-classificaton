@@ -6,7 +6,7 @@ from allennlp.commands import main
 
 
 def debug():
-    config_file = "experiments/venue_classifier.json"
+    config_file = "configs/codexglue/cnn.jsonnet"
     overrides = json.dumps({"trainer": {"cuda_device": -1}})
 
     with tempfile.TemporaryDirectory() as serialization_dir:
