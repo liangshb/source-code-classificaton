@@ -33,6 +33,7 @@ Source code classification
 6. DeepWukong: Statically Detecting Software Vulnerabilities Using Deep Graph Neural Network: DeepWukong
 7. End-to-end prediction of buffer overruns from raw source code via neural memory networks: BufferOverrun
 8. Vulnerability Detection with Fine-grained Interpretations: MSR and Reval
+9. Automated Vulnerability Detection in Source Code Using Minimum Intermediate Representation Learning
 
 ## Models
 

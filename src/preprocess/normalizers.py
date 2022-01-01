@@ -1,6 +1,14 @@
 import re
 
 
+def normalize_fn(example, key: str = "code"):
+    outputs = [remove_comments(code) for code in example[key]]
+    outputs = [remove_non_ascii(code) for code in outputs]
+    outputs = [remove_space_before_newline(code) for code in outputs]
+    outputs = [remove_empty_lines(code) for code in outputs]
+    return {key: outputs}
+
+
 # regex to remove empty lines
 def remove_empty_lines(text):
     return re.sub(r"^$\n", "", text, flags=re.MULTILINE)
@@ -16,7 +24,8 @@ def remove_comments(text):
             return s
 
     pattern = re.compile(
-        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"', re.DOTALL | re.MULTILINE
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE,
     )
     return re.sub(pattern, replacer, text)
 
@@ -24,3 +33,8 @@ def remove_comments(text):
 # regex to remove space before newLine character
 def remove_space_before_newline(text):
     return re.sub(r"\s+$", "", text, flags=re.M)
+
+
+# regex to remove non-ASCII characters
+def remove_non_ascii(text):
+    return re.sub(r"[^\x00-\x7f]", r"", text)
