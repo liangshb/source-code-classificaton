@@ -1,4 +1,4 @@
-from os import EX_PROTOCOL
+import hashlib
 import re
 
 # Sets for operators
@@ -193,7 +193,7 @@ keywords = frozenset(
     }
 )
 
-with open(r"data/sensiAPI.txt", "r") as f:
+with open("sensiAPI.txt", "r") as f:
     a = f.read().split(",")
 keywords = keywords.union(a)
 # holds known non-user-defined functions; immutable set
@@ -203,15 +203,6 @@ main_args = frozenset({"argc", "argv"})
 
 
 def symbolize_var_func_fn(example, key: str = "code"):
-    """
-    change a list of code statements to their symbolic representations
-    Args:
-        gadget: a list of code statements
-
-    Returns:
-
-    """
-
     # dictionary; map function name to symbol name + number
     fun_symbols = {}
     # dictionary; map variable name to symbol name + number
@@ -290,13 +281,45 @@ def symbolize_var_func_fn(example, key: str = "code"):
     return {f"{key}-sym": symbolize_code}
 
 
-def symbolize_str_char(example, key: str = "tokens-sym"):
-    rx_str = re.compile(r'".*?"')
-    rx_char = re.compile(r"'.*?'")
-    for tokens in example[key]:
-        new_tokens = [re.sub(rx_str, f"STR_{len(token)-2}", token) for token in tokens]
+def symbolize_identifier(example, tokens_key: str = "tokens", tags_key: str = "tags"):
+    symbolized_code = []
+    for tokens, tags in zip(example[tokens_key], example[tags_key]):
+        identifiers = [token for token, tag in zip(tokens, tags) if tag == "identifier"]
+        identifier_map = dict(
+            zip(identifiers, [f"IDENTIFIER_{idx}" for idx in range(len(identifiers))])
+        )
+        new_tokens = [identifier_map.get(token, token) for token in tokens]
+        symbolized_code.append(new_tokens)
+    return {f"{tokens_key}-sym": symbolized_code}
+
+
+def symbolize_str_char(example, tokens_key: str = "tokens", tags_key: str = "tags"):
+    symbolized_code = []
+    for tokens, tags in zip(example[tokens_key], example[tags_key]):
         new_tokens = [
-            re.sub(rx_char, "CHAR_{}".format(token.strip("'")), token)
-            for token in new_tokens
+            "STRING_{}".format(hashlib.sha1(token.encode("utf-8")).hexdigest()[:8])
+            if "string_literal" in tag
+            else token
+            for token, tag in zip(tokens, tags)
         ]
-    return {key: new_tokens}
+        new_tokens = [
+            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
+            for token, tag in zip(new_tokens, tags)
+        ]
+        symbolized_code.append(new_tokens)
+    return {tokens_key: symbolized_code}
+
+
+def symbolize_str_char2(example, tokens_key: str = "tokens-sym", tags_key: str = "tags"):
+    symbolized_code = []
+    for tokens, tags in zip(example[tokens_key], example[tags_key]):
+        new_tokens = [
+            f"STRING_{len(token)-2}" if "string_literal" in tag else token
+            for token, tag in zip(tokens, tags)
+        ]
+        new_tokens = [
+            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
+            for token, tag in zip(new_tokens, tags)
+        ]
+        symbolized_code.append(new_tokens)
+    return {tokens_key: symbolized_code}

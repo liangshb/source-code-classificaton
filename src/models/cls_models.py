@@ -57,7 +57,7 @@ class Classifier(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         f1 = self.f1.get_metric(reset)
         mcc = self.mcc.compute().item()
-        spec = self.spec.compute()[0].item()
+        spec = self.spec.compute()[1].item()
         if reset:
             self.mcc.reset()
             self.spec.reset()
@@ -113,7 +113,7 @@ class ClassifierTag(Model):
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
         f1 = self.f1.get_metric(reset)
         mcc = self.mcc.compute().item()
-        spec = self.spec.compute()[0].item()
+        spec = self.spec.compute()[1].item()
         if reset:
             self.mcc.reset()
             self.spec.reset()
