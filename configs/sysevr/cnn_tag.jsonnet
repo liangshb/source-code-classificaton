@@ -9,12 +9,9 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local token_key = "tokens";
 local min_count = {"tokens": 3};
 local embedding_dim = 50;
-local input_size = embedding_dim;
-local hidden_size = 100;
-local num_layers = 2;
-local rnn_dropout = 0.1;
-local layer_dropout_probability = 0.1;
-local use_highway = true;
+local tag_embedding_dim = 10;
+local num_filters = 200;
+local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;
 
 // train
@@ -23,18 +20,24 @@ local weight_decay = 0.0005;
 
 {
   "dataset_reader": {
-    "type": "reader",
+    "type": "reader_tag",
     "token_indexers": {
       "tokens": {
         "type": "single_id",
         "namespace": "tokens"
+      },
+      "tags": {
+        "type": "single_id",
+        "namespace": "tags",
+        "feature_name": "tag_"
       }
     },
     "token_key": token_key
   },
   "vocabulary": {
     "type": "from_instances",
-    "min_count": min_count
+    "min_count": min_count,
+    "non_padded_namespaces": ["*labels"]
   },
   "train_data_path": train_data_path,
   "validation_data_path": validation_data_path,
@@ -46,17 +49,18 @@ local weight_decay = 0.0005;
         "tokens": {
           "type": "embedding",
           "embedding_dim": embedding_dim
+        },
+        "tags": {
+            "type": "embedding",
+            "embedding_dim": tag_embedding_dim
         }
       }
     },
     "encoder": {
-      "type": "stacked_bidirectional_lstm",
-      "input_size": input_size,
-      "hidden_size": hidden_size,
-      "num_layers": num_layers,
-      "recurrent_dropout_probability": rnn_dropout,
-      "layer_dropout_probability": layer_dropout_probability,
-      "use_highway": use_highway
+      "type": "cnn",
+      "embedding_dim": embedding_dim + tag_embedding_dim,
+      "num_filters": num_filters,
+      "ngram_filter_sizes": ngram_filter_sizes,
     },
     "dropout": dropout
   },

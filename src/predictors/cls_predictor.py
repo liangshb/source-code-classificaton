@@ -9,12 +9,12 @@ from allennlp.predictors import Predictor
 
 @Predictor.register("predictor")
 class CLSPredictor(Predictor):
-    def predict(self, tokens: List[str]) -> JsonDict:
+    def predict(self, tokens: str) -> JsonDict:
         return self.predict_json({"tokens": tokens})
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
-        code = json_dict["tokens"]
-        return self._dataset_reader.text_to_instance(code)
+        tokens = json_dict["tokens"].split()
+        return self._dataset_reader.text_to_instance(tokens)
 
     def predictions_to_labeled_instances(
         self, instance: Instance, outputs: Dict[str, numpy.ndarray]
