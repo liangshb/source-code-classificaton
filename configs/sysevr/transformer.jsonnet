@@ -8,13 +8,18 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 // hyperparameters
 local tokens_key = "tokens-hash";
 local min_count = {"tokens": 3};
-local embedding_dim = 50;
-local filters = [[5, 200], [6, 200], [7, 200], [8, 200]];
-local num_highway = 2;
-local projection_dim = 100;
+local embedding_dim = 64;
+local seq2seq_input_dim = embedding_dim;
+local num_layers = 1;
+local feedforward_hidden_dim = 64;
+local num_attention_heads = 8;
+local positional_encoding = "sinusoidal";
+local positional_embedding_size = 16;
+local seq2seq_dropout = 0.1;
 local activation = "relu";
-local projection_location = "after_highway";
-local do_layer_norm = true;
+local seq2vec_input_dim = embedding_dim;
+local num_filters = 200;
+local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;
 
 // train
@@ -30,7 +35,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "tokens_key": tokens_key
+    "tokens_key": tokens_key,
   },
   "vocabulary": {
     "type": "from_instances",
@@ -40,7 +45,7 @@ local weight_decay = 0.0005;
   "validation_data_path": validation_data_path,
   "test_data_path": test_data_path,
   "model": {
-    "type": "classifier",
+    "type": "seq2seq2vec",
     "embedder": {
       "token_embedders": {
         "tokens": {
@@ -49,15 +54,22 @@ local weight_decay = 0.0005;
         }
       }
     },
-    "encoder": {
-      "type": "cnn-highway",
-      "embedding_dim": embedding_dim,
-      "filters": filters,
-      "num_highway": num_highway,
-      "projection_dim": projection_dim,
-      "activation": activation,
-      "projection_location": projection_location,
-      "do_layer_norm": do_layer_norm
+    "seq2seq_encoder": {
+      "type": "pytorch_transformer",
+      "input_dim": seq2seq_input_dim,
+      "num_layers": num_layers,
+      "feedforward_hidden_dim": feedforward_hidden_dim,
+      "num_attention_heads": num_attention_heads,
+      "positional_encoding": positional_encoding,
+      "positional_embedding_size": positional_embedding_size,
+      "dropout_prob": seq2seq_dropout,
+      "activation": activation
+    },
+    "seq2vec_encoder": {
+      "type": "cnn",
+      "embedding_dim": seq2vec_input_dim,
+      "num_filters": num_filters,
+      "ngram_filter_sizes": ngram_filter_sizes,
     },
     "dropout": dropout
   },

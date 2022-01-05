@@ -13,8 +13,8 @@ class ReaderTag(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         max_sequence_length: int = None,
         skip_label_indexing: bool = False,
-        token_key: str = "tokens",
-        tag_key: str = "tags",
+        tokens_key: str = "tokens",
+        tags_key: str = "tags",
         label_key: str = "label",
         **kwargs
     ):
@@ -25,8 +25,8 @@ class ReaderTag(DatasetReader):
         }
         self.max_sequence_length = max_sequence_length
         self.skip_label_indexing = skip_label_indexing
-        self.token_key = token_key
-        self.tag_key = tag_key
+        self.token_key = tokens_key
+        self.tag_key = tags_key
         self.label_key = label_key
 
     def text_to_instance(

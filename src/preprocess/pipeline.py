@@ -2,7 +2,11 @@ from datasets import Dataset, DatasetDict
 from datasets.arrow_dataset import Batch
 
 from src.preprocess.normalizers import normalize_fn
-from src.preprocess.symbolizer import symbolize_identifier, symbolize_str_char, symbolize_str_char2
+from src.preprocess.symbolizer import (
+    symbolize_code_str_char_hash,
+    symbolize_code_str_char_len,
+    symbolize_code_var_func,
+)
 from src.preprocess.tokenizer import cpp_tokenizer, java_tokenizer
 
 
@@ -11,33 +15,47 @@ def preprocess_pipeline(dataset: Dataset, code_key: str = "code", language: str 
     print("normalizing")
     dataset = dataset.map(lambda example: normalize_fn(example, code_key), batched=True)
 
-    # tokenize: add tokens, tags
+    # symbolize phase1: symbolize string and char, add code-hash, code-len
+    print("symbolizing phase1")
+    dataset = dataset.map(
+        lambda example: symbolize_code_str_char_hash(example, code_key=code_key), batched=True
+    )
+    dataset = dataset.map(
+        lambda example: symbolize_code_str_char_len(example, code_key=code_key), batched=True
+    )
+
+    # symbolize phase2: symbolize func and var
+    print("symbolizing phase2")
+    dataset = dataset.map(
+        lambda example: symbolize_code_var_func(example, code_key="code-hash"), batched=True
+    )
+    dataset = dataset.map(
+        lambda example: symbolize_code_var_func(example, code_key="code-len"), batched=True
+    )
+
+    # tokenize: add tokens-hash, tokens-len, tags-hash, tags-len
     print("tokenizing")
     if language == "cpp":
-        dataset = dataset.map(lambda example: cpp_tokenizer(example, code_key), batched=True)
+        dataset = dataset.map(
+            lambda example: cpp_tokenizer(example, key="code-hash", postfix="-hash"),
+            batched=True,
+        )
+        dataset = dataset.map(
+            lambda example: cpp_tokenizer(example, key="code-len", postfix="-len"),
+            batched=True,
+        )
     elif language == "java":
-        dataset = dataset.map(lambda example: java_tokenizer(example, code_key), batched=True)
+        dataset = dataset.map(
+            lambda example: java_tokenizer(example, key="code-hash", postfix="-hash"),
+            batched=True,
+        )
+        dataset = dataset.map(
+            lambda example: java_tokenizer(example, key="code-len", postfix="-len"),
+            batched=True,
+        )
     else:
         print("Not supported language")
         exit(-1)
-
-    # symbolize phase1: symbolize identifier: add tokens-sym
-    print("symbolizing phase1")
-    dataset = dataset.map(
-        lambda example: symbolize_identifier(example, tokens_key="tokens", tags_key="tags"),
-        batched=True,
-    )
-
-    # symbolize phase2: symbolize string and char
-    print("symbolizing phase2")
-    dataset = dataset.map(
-        lambda example: symbolize_str_char(example, tokens_key="tokens", tags_key="tags"),
-        batched=True,
-    )
-    dataset = dataset.map(
-        lambda example: symbolize_str_char2(example, tokens_key="tokens-sym", tags_key="tags"),
-        batched=True,
-    )
 
     return dataset
 

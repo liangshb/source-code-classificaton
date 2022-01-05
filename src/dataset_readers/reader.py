@@ -13,7 +13,7 @@ class Reader(DatasetReader):
         token_indexers: Dict[str, TokenIndexer] = None,
         max_sequence_length: int = None,
         skip_label_indexing: bool = False,
-        token_key: str = "tokens",
+        tokens_key: str = "tokens",
         label_key: str = "label",
         **kwargs
     ):
@@ -23,7 +23,7 @@ class Reader(DatasetReader):
         }
         self.max_sequence_length = max_sequence_length
         self.skip_label_indexing = skip_label_indexing
-        self.token_key = token_key
+        self.token_key = tokens_key
         self.label_key = label_key
 
     def text_to_instance(self, tokens: List[str], label: Union[str, int] = None) -> Instance:

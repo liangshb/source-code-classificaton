@@ -202,25 +202,32 @@ main_set = frozenset({"main"})
 main_args = frozenset({"argc", "argv"})
 
 
-def symbolize_var_func_fn(example, key: str = "code"):
-    # dictionary; map function name to symbol name + number
-    fun_symbols = {}
-    # dictionary; map variable name to symbol name + number
-    var_symbols = {}
-
-    fun_count = 1
-    var_count = 1
-
+def symbolize_code_var_func(example, code_key: str = "code"):
     # regular expression to find function name candidates
     rx_fun = re.compile(r"\b([_A-Za-z]\w*)\b(?=\s*\()")
     # regular expression to find variable name candidates
     # rx_var = re.compile(r'\b([_A-Za-z]\w*)\b(?!\s*\()')
     rx_var = re.compile(r"\b([_A-Za-z]\w*)\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()")
 
-    # final cleaned gadget output to return to interface
+    # rx_str = re.compile(r'".*?"', re.DOTALL)
+    # rx_char = re.compile(r"'.*?'", re.DOTALL)
+    rx_str_char = re.compile(r"(STRING_|CHAR_)")
+
     symbolize_code = []
 
-    for code in example[key]:
+    for code in example[code_key]:
+        # remove string and char
+        # code = re.sub(rx_str, '""', code)
+        # code = re.sub(rx_char, "''", code)
+
+        # dictionary; map function name to symbol name + number
+        fun_symbols = {}
+        # dictionary; map variable name to symbol name + number
+        var_symbols = {}
+
+        fun_count = 1
+        var_count = 1
+
         user_fun = rx_fun.findall(code)
         user_var = rx_var.findall(code)
 
@@ -233,6 +240,7 @@ def symbolize_var_func_fn(example, key: str = "code"):
             if (
                 len({fun_name}.difference(main_set)) != 0
                 and len({fun_name}.difference(keywords)) != 0
+                and not rx_str_char.match(fun_name)
             ):
                 # DEBUG
                 # print('comparing ' + str(fun_name + ' to ' + str(main_set)))
@@ -257,6 +265,7 @@ def symbolize_var_func_fn(example, key: str = "code"):
             if (
                 len({var_name}.difference(keywords)) != 0
                 and len({var_name}.difference(main_args)) != 0
+                and not rx_str_char.match(var_name)
             ):
                 # DEBUG
                 # print('comparing ' + str(var_name + ' to ' + str(keywords)))
@@ -278,7 +287,43 @@ def symbolize_var_func_fn(example, key: str = "code"):
 
         symbolize_code.append(code)
     # return the list of cleaned lines
-    return {f"{key}-sym": symbolize_code}
+    return {code_key: symbolize_code}
+
+
+def symbolize_code_str_char_hash(example, code_key: str = "code"):
+    symbolized_code = []
+    rx_str = re.compile(r'".*?"', re.DOTALL)
+    rx_char = re.compile(r"'.*?'", re.DOTALL)
+
+    def symbolize_str(matched):
+        return '"STRING_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
+
+    def symbolize_char(matched):
+        return '"CHAR_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
+
+    for code in example[code_key]:
+        code = re.sub(rx_str, symbolize_str, code)
+        code = re.sub(rx_char, symbolize_char, code)
+        symbolized_code.append(code)
+    return {f"{code_key}-hash": symbolized_code}
+
+
+def symbolize_code_str_char_len(example, code_key: str = "code"):
+    symbolized_code = []
+    rx_str = re.compile(r'".*?"', re.DOTALL)
+    rx_char = re.compile(r"'.*?'", re.DOTALL)
+
+    def symbolize_str(matched):
+        return '"STRING_{}"'.format(len(matched.group()) - 2)
+
+    def symbolize_char(matched):
+        return '"CHAR_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
+
+    for code in example[code_key]:
+        code = re.sub(rx_str, symbolize_str, code)
+        code = re.sub(rx_char, symbolize_char, code)
+        symbolized_code.append(code)
+    return {f"{code_key}-len": symbolized_code}
 
 
 def symbolize_identifier(example, tokens_key: str = "tokens", tags_key: str = "tags"):
@@ -314,7 +359,7 @@ def symbolize_str_char2(example, tokens_key: str = "tokens-sym", tags_key: str =
     symbolized_code = []
     for tokens, tags in zip(example[tokens_key], example[tags_key]):
         new_tokens = [
-            f"STRING_{len(token)-2}" if "string_literal" in tag else token
+            f"STRING_{len(token) - 2}" if "string_literal" in tag else token
             for token, tag in zip(tokens, tags)
         ]
         new_tokens = [
