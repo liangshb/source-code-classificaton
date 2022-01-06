@@ -1,9 +1,10 @@
-local batch_size = 128;
+local batch_size = 32;
 local num_epochs = 100;
 local dataset = "API_function_call";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
 local validation_data_path = "data/sysevr/%s/validation" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
+
 
 // hyperparameters
 local tokens_key = "tokens-hash";
@@ -18,9 +19,13 @@ local positional_embedding_size = 16;
 local seq2seq_dropout = 0.1;
 local activation = "relu";
 local seq2vec_input_dim = embedding_dim;
-local num_filters = 200;
+local num_filters = 100;
 local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;
+
+//
+local pretrain_type = "fasttext";
+local pretrained_file = "data/sysevr/%s/embedding/%s_%s_%s.txt" % [dataset, pretrain_type, embedding_dim, tokens_key];
 
 // train
 local lr = 0.002;
@@ -50,7 +55,8 @@ local weight_decay = 0.0005;
       "token_embedders": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": embedding_dim
+          "embedding_dim": embedding_dim,
+          "pretrained_file": pretrained_file
         }
       }
     },

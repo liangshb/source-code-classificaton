@@ -22,6 +22,7 @@ Source code classification
 8. [GHPR](https://github.com/feiwww/GHPR_dataset): 8:1:1
 9. [ReVeal](https://github.com/VulDetProject/ReVeal): 8:1:1
 10. [CodeXGLUE](https://github.com/microsoft/CodeXGLUE): pre-defined
+11. [Transferable Representation Learning](https://github.com/DanielLin1986/TransferRepresentationLearning)
 
 ## Baselines
 
@@ -34,6 +35,7 @@ Source code classification
 7. End-to-end prediction of buffer overruns from raw source code via neural memory networks: BufferOverrun
 8. Vulnerability Detection with Fine-grained Interpretations: MSR and Reval
 9. Automated Vulnerability Detection in Source Code Using Minimum Intermediate Representation Learning
+10. Cross-Project Transfer Representation Learning for Vulnerable Function Discovery
 
 ## Models
 

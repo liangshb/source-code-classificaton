@@ -19,3 +19,7 @@ pre-commit
 # --------- others ---------- #
 typing~=3.7.4.3
 flask~=2.0.2
+
+xlrd~=2.0.1
+nltk~=3.6.4
+scikit-learn~=1.0.2

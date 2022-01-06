@@ -3,7 +3,8 @@ import os
 import pandas as pd
 from datasets import Dataset
 
-from src.preprocess.pipeline import preprocess_pipeline, split_pipeline
+from src.preprocess.pipeline import split_pipeline
+from src.preprocess.pipelines.sysevr_pipeline import sysevr_pipeline
 
 
 def read_file(file_path: str, vul_label: int, vul_str: str):
@@ -17,7 +18,7 @@ def read_file(file_path: str, vul_label: int, vul_str: str):
                 continue
             if "-------------------------" in line:
                 if len(example) >= 3:
-                    code = "\n".join(example[1:-1])
+                    code = example[1:-1]
                     try:
                         label = int(example[-1])
                         if label == 0:
@@ -55,7 +56,7 @@ def read_file_mu(file_path: str):
                 continue
             if "-------------------------" in line:
                 if len(example) >= 3:
-                    code = "\n".join([" ".join(e.split()[:-1]) for e in example[1:-1]])
+                    code = [" ".join(e.split()[:-1]) for e in example[1:-1]]
                     try:
                         label = int(example[-1])
                         if label == 0:
@@ -84,7 +85,7 @@ def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr"):
     vul_files = [file for file in os.listdir(raw_data_path) if file.endswith(".txt")]
 
     full_examples = []
-    for vul_label, file in enumerate(vul_files):
+    for vul_label, file in enumerate(vul_files, start=1):
         print(f"Processing {file}")
         file_path = os.path.join(raw_data_path, file)
         vul_str = file.split(".")[0]
@@ -93,7 +94,7 @@ def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr"):
         if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
             os.makedirs(save_path, exist_ok=True)
             dataset = Dataset.from_pandas(pd.DataFrame(vul_examples))
-            dataset = preprocess_pipeline(dataset)
+            dataset = sysevr_pipeline(dataset)
             dataset_dict = split_pipeline(dataset)
             dataset_dict.save_to_disk(save_path)
             print(f"{vul_str} dataset dict saved")
@@ -104,7 +105,7 @@ def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr"):
     if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
         os.makedirs(save_path, exist_ok=True)
         dataset = Dataset.from_pandas(pd.DataFrame(full_examples))
-        dataset = preprocess_pipeline(dataset)
+        dataset = sysevr_pipeline(dataset)
         dataset_dict = split_pipeline(dataset)
         dataset_dict.save_to_disk(save_path)
         print("full dataset dict saved")
@@ -119,7 +120,7 @@ def preprocess_muvuldeepecker(data_dir: str, dataset_name: str = "muvuldeepecker
         os.makedirs(save_path, exist_ok=True)
         vul_examples = read_file_mu(vul_file)
         dataset = Dataset.from_pandas(pd.DataFrame(vul_examples))
-        dataset = preprocess_pipeline(dataset)
+        dataset = sysevr_pipeline(dataset)
         dataset_dict = split_pipeline(dataset)
         dataset_dict.save_to_disk(save_path)
         print("full dataset dict saved")

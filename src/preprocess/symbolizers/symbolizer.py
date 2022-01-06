@@ -201,6 +201,75 @@ main_set = frozenset({"main"})
 # arguments in main function; immutable set
 main_args = frozenset({"argc", "argv"})
 
+unchanged = keywords.union(main_args)
+unchanged = unchanged.union(main_set)
+
+
+def reval_symbolize(example, tokens_key: str = "tokens", postfix: str = ""):
+    symbolize_tokens = []
+    for tokens in example[tokens_key]:
+        f_count = 1
+        var_count = 1
+        symbol_table = {}
+        final_tokens = []
+        for idx in range(len(tokens)):
+            t = tokens[idx]
+            if t in keywords:
+                final_tokens.append(t)
+            elif t in operators1:
+                final_tokens.append(t)
+            elif t in operators2:
+                final_tokens.append(t)
+            elif t in operators3:
+                final_tokens.append(t)
+            elif tokens[idx + 1] == "(":
+                if t in keywords:
+                    final_tokens.append(t + "(")
+                else:
+                    if t not in symbol_table.keys():
+                        symbol_table[t] = "FUN" + str(f_count)
+                        f_count += 1
+                    final_tokens.append(symbol_table[t] + "(")
+                idx += 1
+
+            elif t.endswith("("):
+                t = t[:-1]
+                if t in keywords:
+                    final_tokens.append(t + "(")
+                else:
+                    if t not in symbol_table.keys():
+                        symbol_table[t] = "FUN" + str(f_count)
+                        f_count += 1
+                    final_tokens.append(symbol_table[t] + "(")
+            elif t.endswith("()"):
+                t = t[:-2]
+                if t in keywords:
+                    final_tokens.append(t + "()")
+                else:
+                    if t not in symbol_table.keys():
+                        symbol_table[t] = "FUN" + str(f_count)
+                        f_count += 1
+                    final_tokens.append(symbol_table[t] + "()")
+            elif re.match(r'".*"', t, re.DOTALL) is not None:
+                final_tokens.append(
+                    '"@@STRING_{}"'.format(hashlib.sha1(t.encode("utf-8")).hexdigest()[:8])
+                )
+            elif re.match(r"'.*'", t, re.DOTALL) is not None:
+                final_tokens.append(
+                    '"@@CHAR_{}"'.format(hashlib.sha1(t.encode("utf-8")).hexdigest()[:8])
+                )
+            elif re.match(r"^[0-9]+(\.[0-9]+)?$", t) is not None:
+                final_tokens.append(t)
+            elif re.match(r"^[0-9]*(\.[0-9]+)$", t) is not None:
+                final_tokens.append(t)
+            else:
+                if t not in symbol_table.keys():
+                    symbol_table[t] = "VAR" + str(var_count)
+                    var_count += 1
+                final_tokens.append(symbol_table[t])
+        symbolize_tokens.append(final_tokens)
+    return {f"tokens{postfix}": symbolize_tokens}
+
 
 def symbolize_code_var_func(example, code_key: str = "code"):
     # regular expression to find function name candidates
@@ -209,16 +278,11 @@ def symbolize_code_var_func(example, code_key: str = "code"):
     # rx_var = re.compile(r'\b([_A-Za-z]\w*)\b(?!\s*\()')
     rx_var = re.compile(r"\b([_A-Za-z]\w*)\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()")
 
-    # rx_str = re.compile(r'".*?"', re.DOTALL)
-    # rx_char = re.compile(r"'.*?'", re.DOTALL)
     rx_str_char = re.compile(r"(STRING_|CHAR_)")
 
     symbolize_code = []
 
     for code in example[code_key]:
-        # remove string and char
-        # code = re.sub(rx_str, '""', code)
-        # code = re.sub(rx_char, "''", code)
 
         # dictionary; map function name to symbol name + number
         fun_symbols = {}
@@ -292,8 +356,8 @@ def symbolize_code_var_func(example, code_key: str = "code"):
 
 def symbolize_code_str_char_hash(example, code_key: str = "code"):
     symbolized_code = []
-    rx_str = re.compile(r'".*?"', re.DOTALL)
-    rx_char = re.compile(r"'.*?'", re.DOTALL)
+    rx_str = re.compile(r'".*"', re.DOTALL)
+    rx_char = re.compile(r"'.*'", re.DOTALL)
 
     def symbolize_str(matched):
         return '"STRING_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
@@ -310,8 +374,8 @@ def symbolize_code_str_char_hash(example, code_key: str = "code"):
 
 def symbolize_code_str_char_len(example, code_key: str = "code"):
     symbolized_code = []
-    rx_str = re.compile(r'".*?"', re.DOTALL)
-    rx_char = re.compile(r"'.*?'", re.DOTALL)
+    rx_str = re.compile(r'".*"', re.DOTALL)
+    rx_char = re.compile(r"'.*'", re.DOTALL)
 
     def symbolize_str(matched):
         return '"STRING_{}"'.format(len(matched.group()) - 2)
@@ -329,7 +393,16 @@ def symbolize_code_str_char_len(example, code_key: str = "code"):
 def symbolize_identifier(example, tokens_key: str = "tokens", tags_key: str = "tags"):
     symbolized_code = []
     for tokens, tags in zip(example[tokens_key], example[tags_key]):
-        identifiers = [token for token, tag in zip(tokens, tags) if tag == "identifier"]
+        # identifiers = [
+        #     token
+        #     for token, tag in zip(tokens, tags)
+        #     if tag == "identifier" and {token}.difference(unchanged)
+        # ]
+        # identifiers = set(identifiers)
+        identifiers = []
+        for token, tag in zip(tokens, tags):
+            if tag == "identifier" and {token}.difference(unchanged) and token not in identifiers:
+                identifiers.append(token)
         identifier_map = dict(
             zip(identifiers, [f"IDENTIFIER_{idx}" for idx in range(len(identifiers))])
         )
@@ -338,7 +411,7 @@ def symbolize_identifier(example, tokens_key: str = "tokens", tags_key: str = "t
     return {f"{tokens_key}-sym": symbolized_code}
 
 
-def symbolize_str_char(example, tokens_key: str = "tokens", tags_key: str = "tags"):
+def symbolize_str_char_hash(example, tokens_key: str = "tokens-sym", tags_key: str = "tags"):
     symbolized_code = []
     for tokens, tags in zip(example[tokens_key], example[tags_key]):
         new_tokens = [
@@ -348,14 +421,16 @@ def symbolize_str_char(example, tokens_key: str = "tokens", tags_key: str = "tag
             for token, tag in zip(tokens, tags)
         ]
         new_tokens = [
-            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
+            "CHAR_{}".format(hashlib.sha1(token.encode("utf-8")).hexdigest()[:8])
+            if "char_literal" in tag
+            else token
             for token, tag in zip(new_tokens, tags)
         ]
         symbolized_code.append(new_tokens)
-    return {tokens_key: symbolized_code}
+    return {f"{tokens_key}-hash": symbolized_code}
 
 
-def symbolize_str_char2(example, tokens_key: str = "tokens-sym", tags_key: str = "tags"):
+def symbolize_str_char_len(example, tokens_key: str = "tokens-sym", tags_key: str = "tags"):
     symbolized_code = []
     for tokens, tags in zip(example[tokens_key], example[tags_key]):
         new_tokens = [
@@ -363,8 +438,10 @@ def symbolize_str_char2(example, tokens_key: str = "tokens-sym", tags_key: str =
             for token, tag in zip(tokens, tags)
         ]
         new_tokens = [
-            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
+            "CHAR_{}".format(hashlib.sha1(token.encode("utf-8")).hexdigest()[:8])
+            if "char_literal" in tag
+            else token
             for token, tag in zip(new_tokens, tags)
         ]
         symbolized_code.append(new_tokens)
-    return {tokens_key: symbolized_code}
+    return {f"{tokens_key}-len": symbolized_code}

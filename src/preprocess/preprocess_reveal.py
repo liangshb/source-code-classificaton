@@ -5,7 +5,8 @@ import pandas as pd
 from codegen.cpp_processor import CppProcessor
 from datasets import Dataset, DatasetDict, load_from_disk
 from normalizers import remove_comments, remove_empty_lines, remove_space_before_newline
-from tokenize_utils import tokenize_fn
+
+from src.preprocess.tokenizers.tokenize_utils import tokenize_fn
 
 log = logging.getLogger(__name__)
 

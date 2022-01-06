@@ -1,13 +1,33 @@
 from datasets import Dataset, DatasetDict
-from datasets.arrow_dataset import Batch
 
 from src.preprocess.normalizers import normalize_fn
-from src.preprocess.symbolizer import (
+from src.preprocess.symbolizers.symbolizer import (
+    reval_symbolize,
     symbolize_code_str_char_hash,
     symbolize_code_str_char_len,
     symbolize_code_var_func,
+    symbolize_identifier,
+    symbolize_str_char_hash,
+    symbolize_str_char_len,
 )
-from src.preprocess.tokenizer import cpp_tokenizer, java_tokenizer
+from src.preprocess.tokenizers.tree_sitter_tokenizer import (
+    cpp_tokenizer,
+    java_tokenizer,
+    nltk_tokenizer,
+)
+
+
+def reveal_pipeline(dataset: Dataset, code_key: str = "code"):
+    print("normalizing")
+    dataset = dataset.map(lambda example: normalize_fn(example, code_key), batched=True)
+
+    print("tokenize")
+    dataset = dataset.map(lambda example: nltk_tokenizer(example, code_key), batched=True)
+
+    print("symbolize")
+    dataset = dataset.map(lambda example: reval_symbolize(example), batched=True)
+
+    return dataset
 
 
 def preprocess_pipeline(dataset: Dataset, code_key: str = "code", language: str = "cpp"):
@@ -56,6 +76,38 @@ def preprocess_pipeline(dataset: Dataset, code_key: str = "code", language: str 
     else:
         print("Not supported language")
         exit(-1)
+
+    return dataset
+
+
+def pipeline_tokenize_first(dataset: Dataset, code_key: str = "code", language: str = "cpp"):
+    # normalize
+    print("normalizing")
+    dataset = dataset.map(lambda example: normalize_fn(example, code_key), batched=True)
+
+    # tokenize: add tokens, tags
+    print("tokenizing")
+    if language == "cpp":
+        dataset = dataset.map(
+            lambda example: cpp_tokenizer(example, key=code_key),
+            batched=True,
+        )
+    elif language == "java":
+        dataset = dataset.map(
+            lambda example: java_tokenizer(example, key=code_key),
+            batched=True,
+        )
+    else:
+        print("Not supported language")
+        exit(-1)
+
+    # symbolize identifier: add tokens-sym
+    print("symbolize identifier")
+    dataset = dataset.map(lambda example: symbolize_identifier(example), batched=True)
+    # symbolize str and char
+    print("symbolize string and char")
+    dataset = dataset.map(lambda example: symbolize_str_char_hash(example), batched=True)
+    dataset = dataset.map(lambda example: symbolize_str_char_len(example), batched=True)
 
     return dataset
 

@@ -417,7 +417,11 @@
             <div class="model__content">
               <div class="form__field">
                 <label for="input-tokens">tokens</label>
-                <textarea rows="30" id="input-tokens" placeholder="input goes here">
+                <textarea
+                  rows="30"
+                  id="input-tokens"
+                  placeholder="input goes here"
+                >
                 </textarea>
               </div>
               <div class="form__field form__field--btn">
@@ -453,7 +457,7 @@
                 </div>
               </div>
             </div>
-            <hr>
+            <hr />
             <h2><span>Saliency map</span></h2>
             <div id="output2" class="output">
               <div class="placeholder">
@@ -462,7 +466,7 @@
                 </div>
               </div>
             </div>
-            <hr>
+            <hr />
             <h2><span>Attacker</span></h2>
             <div id="output3" class="output">
               <div class="placeholder">
@@ -493,13 +497,7 @@
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.onload = function () {
         if (xhr.status == 200) {
-          // If you want a more impressive visualization than just
-          // outputting the raw JSON, change this part of the code.
-          var htmlResults =
-            "<pre>" +
-            JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-            "</pre>";
-          document.getElementById("output").innerHTML = htmlResults;
+          renderPrediction(JSON.parse(xhr.responseText));
         }
       };
       xhr.send(JSON.stringify(data));
@@ -516,13 +514,7 @@
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.onload = function () {
         if (xhr.status == 200) {
-          // If you want a more impressive visualization than just
-          // outputting the raw JSON, change this part of the code.
-          var htmlResults =
-            "<pre>" +
-            JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-            "</pre>";
-          document.getElementById("output2").innerHTML = htmlResults;
+          renderSaliencymap(JSON.parse(xhr.responseText));
         }
       };
       xhr.send(JSON.stringify(data));
@@ -539,16 +531,74 @@
       xhr.setRequestHeader("Content-Type", "application/json");
       xhr.onload = function () {
         if (xhr.status == 200) {
-          // If you want a more impressive visualization than just
-          // outputting the raw JSON, change this part of the code.
-          var htmlResults =
-            "<pre>" +
-            JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-            "</pre>";
-          document.getElementById("output3").innerHTML = htmlResults;
+          renderAttacker(JSON.parse(xhr.responseText));
         }
       };
       xhr.send(JSON.stringify(data));
     }
+    let getSentenceColorForActivation = function (a) {
+      return `rgba(0, 0, 255, ${a})`;
+    };
+    let getWordColorForActivation = function (a) {
+      return `rgba(255, 0, 0, ${a})`;
+    };
+    let createSentenceElement = function (sa, words, originalWords) {
+      let sentenceElement = document.createElement("li");
+      sentenceElement.className = "sentence";
+      sentenceElement.style.backgroundColor = getSentenceColorForActivation(sa);
+
+      let wordsContainer = document.createElement("div");
+      wordsContainer.className = "words-container";
+      wordsContainer.style.backgroundColor = "white";
+      let s_weight = Math.sqrt(sa);
+      for (let i = 0; i < words.length; i++) {
+        let a = words[i][1];
+        let w = originalWords[i];
+        wordsContainer.appendChild(createWordElement(w, a, s_weight));
+      }
+      wordsContainer.appendChild(createWordElement(".", 0, sa));
+      sentenceElement.appendChild(wordsContainer);
+
+      return sentenceElement;
+    };
+    let createWordElement = function (w, a, s_weight) {
+      let wordElement = document.createElement("div");
+      wordElement.className = "word";
+      wordElement.style.backgroundColor = getWordColorForActivation(
+        s_weight * a
+      );
+      wordElement.innerHTML = w;
+      return wordElement;
+    };
+    let renderSaliencymap = function (data) {
+      let grads = data.instance_1.grad_input_1;
+      let text = document.getElementById("input-tokens").value;
+      let tokens = text.split();
+      let saliencyMap = document.createElement("div");
+      for (let i = 0; i < grads.length; i++) {
+        let grad = grads[i];
+        let token = tokens[i];
+      }
+      let result = { grads: grads, tokens: tokens };
+      document.getElementById("output2").innerHTML =
+        "<pre>" + JSON.stringify(result, null, 2) + "</pre>";
+    };
+    let renderAttacker = function (data) {
+      let final_text = data.final.join(" ");
+      let original_text = data.original.join(" ");
+      let output_prob = data.outputs[0].probs;
+      let result = {
+        final: final_text,
+        origin: original_text,
+        output: output_prob,
+      };
+      document.getElementById("output3").innerHTML =
+        "<pre>" + JSON.stringify(result, null, 2) + "</pre>";
+    };
+    let renderPrediction = function (prediction) {
+      predictionText = JSON.stringify(prediction, null, 2);
+      document.getElementById("output").innerHTML =
+        "<pre>" + predictionText + "</pre>";
+    };
   </script>
 </html>
