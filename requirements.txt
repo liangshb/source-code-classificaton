@@ -9,6 +9,7 @@ allennlp~=2.8.0
 datasets~=1.16.1
 sacrebleu~=1.2.21
 gensim~=4.1.2
+wordninja~=2.0.0
 
 # ----------- code ----------- #
 tree-sitter~=0.19.0

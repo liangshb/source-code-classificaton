@@ -1,23 +1,14 @@
 local batch_size = 128;
 local num_epochs = 100;
-local dataset = "API_function_call";
-local train_data_path = "data/sysevr/%s/train" % [dataset];
-local validation_data_path = "data/sysevr/%s/validation" % [dataset];
-local test_data_path = "data/sysevr/%s/test" % [dataset];
+local dataset = "CWE119";
+local train_data_path = "data/deepwukong/%s/train" % [dataset];
+local validation_data_path = "data/deepwukong/%s/validation" % [dataset];
+local test_data_path = "data/deepwukong/%s/test" % [dataset];
 
 // hyperparameters
-local tokens_key = "tokens-hash";
-local min_count = {"tokens": 3};
+local tokens_key = "tokens-sym-no";
+local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local seq2seq_input_dim = embedding_dim;
-local num_layers = 1;
-local feedforward_hidden_dim = 64;
-local num_attention_heads = 8;
-local positional_encoding = "sinusoidal";
-local positional_embedding_size = 16;
-local seq2seq_dropout = 0.1;
-local activation = "relu";
-local seq2vec_input_dim = embedding_dim;
 local num_filters = 200;
 local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;
@@ -45,7 +36,7 @@ local weight_decay = 0.0005;
   "validation_data_path": validation_data_path,
   "test_data_path": test_data_path,
   "model": {
-    "type": "seq2seq2vec",
+    "type": "classifier",
     "embedder": {
       "token_embedders": {
         "tokens": {
@@ -54,20 +45,9 @@ local weight_decay = 0.0005;
         }
       }
     },
-    "seq2seq_encoder": {
-      "type": "pytorch_transformer",
-      "input_dim": seq2seq_input_dim,
-      "num_layers": num_layers,
-      "feedforward_hidden_dim": feedforward_hidden_dim,
-      "num_attention_heads": num_attention_heads,
-      "positional_encoding": positional_encoding,
-      "positional_embedding_size": positional_embedding_size,
-      "dropout_prob": seq2seq_dropout,
-      "activation": activation
-    },
-    "seq2vec_encoder": {
+    "encoder": {
       "type": "cnn",
-      "embedding_dim": seq2vec_input_dim,
+      "embedding_dim": embedding_dim,
       "num_filters": num_filters,
       "ngram_filter_sizes": ngram_filter_sizes,
     },

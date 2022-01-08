@@ -1,5 +1,10 @@
-import hashlib
 import re
+import warnings
+from typing import List
+
+import wordninja as wn
+
+warnings.filterwarnings("ignore")
 
 # Sets for operators
 operators3 = {"<<=", ">>="}
@@ -192,8 +197,7 @@ keywords = frozenset(
         "NULL",
     }
 )
-
-with open("sensiAPI.txt", "r") as f:
+with open(r"sensiAPI.txt", "r") as f:
     a = f.read().split(",")
 keywords = keywords.union(a)
 # holds known non-user-defined functions; immutable set
@@ -202,34 +206,47 @@ main_set = frozenset({"main"})
 main_args = frozenset({"argc", "argv"})
 
 
-def symbolize_code_var_func(example, code_key: str = "code"):
+def clean_gadget(gadget: List[str]):
+    """
+    change a list of code statements to their symbolic representations
+    Args:
+        gadget: a list of code statements
+
+    Returns:
+
+    """
+    # dictionary; map function name to symbol name + number
+    fun_symbols = {}
+    # dictionary; map variable name to symbol name + number
+    var_symbols = {}
+
+    fun_count = 1
+    var_count = 1
+
+    # regular expression to catch multi-line comment
+    rx_comment = re.compile(r"\*/\s*$")
     # regular expression to find function name candidates
     rx_fun = re.compile(r"\b([_A-Za-z]\w*)\b(?=\s*\()")
     # regular expression to find variable name candidates
     # rx_var = re.compile(r'\b([_A-Za-z]\w*)\b(?!\s*\()')
     rx_var = re.compile(r"\b([_A-Za-z]\w*)\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()")
 
-    # rx_str = re.compile(r'".*?"', re.DOTALL)
-    # rx_char = re.compile(r"'.*?'", re.DOTALL)
-    rx_str_char = re.compile(r"(STRING_|CHAR_)")
+    # final cleaned gadget output to return to interface
+    cleaned_gadget = []
 
-    symbolize_code = []
+    for line in gadget:
+        # process if not the header line and not a multi-line commented line
+        # if rx_comment.search(line) is None:
+        # remove all string literals (keep the quotes)
+        nostrlit_line = re.sub(r'".*?"', '""', line)
+        # remove all character literals
+        nocharlit_line = re.sub(r"'.*?'", "''", nostrlit_line)
+        # replace any non-ASCII characters with empty string
+        ascii_line = re.sub(r"[^\x00-\x7f]", r"", nocharlit_line)
 
-    for code in example[code_key]:
-        # remove string and char
-        # code = re.sub(rx_str, '""', code)
-        # code = re.sub(rx_char, "''", code)
-
-        # dictionary; map function name to symbol name + number
-        fun_symbols = {}
-        # dictionary; map variable name to symbol name + number
-        var_symbols = {}
-
-        fun_count = 1
-        var_count = 1
-
-        user_fun = rx_fun.findall(code)
-        user_var = rx_var.findall(code)
+        # return, in order, all regex matches at string list; preserves order for semantics
+        user_fun = rx_fun.findall(ascii_line)
+        user_var = rx_var.findall(ascii_line)
 
         # Could easily make a "clean gadget" type class to prevent duplicate functionality
         # of creating/comparing symbol names for functions and variables in much the same way.
@@ -240,7 +257,6 @@ def symbolize_code_var_func(example, code_key: str = "code"):
             if (
                 len({fun_name}.difference(main_set)) != 0
                 and len({fun_name}.difference(keywords)) != 0
-                and not rx_str_char.match(fun_name)
             ):
                 # DEBUG
                 # print('comparing ' + str(fun_name + ' to ' + str(main_set)))
@@ -254,10 +270,8 @@ def symbolize_code_var_func(example, code_key: str = "code"):
                     fun_count += 1
                 # ensure that only function name gets replaced (no variable name with same
                 # identifier); uses positive lookforward
-                code = re.sub(
-                    r"\b(" + fun_name + r")\b(?=\s*\()",
-                    fun_symbols[fun_name],
-                    code,
+                ascii_line = re.sub(
+                    r"\b(" + fun_name + r")\b(?=\s*\()", fun_symbols[fun_name], ascii_line
                 )
 
         for var_name in user_var:
@@ -265,7 +279,6 @@ def symbolize_code_var_func(example, code_key: str = "code"):
             if (
                 len({var_name}.difference(keywords)) != 0
                 and len({var_name}.difference(main_args)) != 0
-                and not rx_str_char.match(var_name)
             ):
                 # DEBUG
                 # print('comparing ' + str(var_name + ' to ' + str(keywords)))
@@ -279,92 +292,75 @@ def symbolize_code_var_func(example, code_key: str = "code"):
                     var_count += 1
                 # ensure that only variable name gets replaced (no function name with same
                 # identifier); uses negative lookforward
-                code = re.sub(
+                ascii_line = re.sub(
                     r"\b(" + var_name + r")\b(?:(?=\s*\w+\()|(?!\s*\w+))(?!\s*\()",
                     var_symbols[var_name],
-                    code,
+                    ascii_line,
                 )
 
-        symbolize_code.append(code)
+        cleaned_gadget.append(ascii_line)
     # return the list of cleaned lines
-    return {code_key: symbolize_code}
+    return cleaned_gadget
 
 
-def symbolize_code_str_char_hash(example, code_key: str = "code"):
-    symbolized_code = []
-    rx_str = re.compile(r'".*?"', re.DOTALL)
-    rx_char = re.compile(r"'.*?'", re.DOTALL)
-
-    def symbolize_str(matched):
-        return '"STRING_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
-
-    def symbolize_char(matched):
-        return '"CHAR_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
-
-    for code in example[code_key]:
-        code = re.sub(rx_str, symbolize_str, code)
-        code = re.sub(rx_char, symbolize_char, code)
-        symbolized_code.append(code)
-    return {f"{code_key}-hash": symbolized_code}
+def tokenize_lines(example, key: str = "nodes-line-sym", postfix: str = ""):
+    lines_tokens_list = []
+    for lines in example[key]:
+        lines_tokens = [tokenize_code_line(line, False) for line in lines]
+        lines_tokens_list.append(lines_tokens)
+    return {f"tokens-{postfix}": lines_tokens_list}
 
 
-def symbolize_code_str_char_len(example, code_key: str = "code"):
-    symbolized_code = []
-    rx_str = re.compile(r'".*?"', re.DOTALL)
-    rx_char = re.compile(r"'.*?'", re.DOTALL)
+def tokenize_code_line(line: str, subtoken: bool):
+    """
+    transform a string of code line into list of tokens
 
-    def symbolize_str(matched):
-        return '"STRING_{}"'.format(len(matched.group()) - 2)
+    Args:
+        line: code line
+        subtoken: whether to split into subtokens
 
-    def symbolize_char(matched):
-        return '"CHAR_{}"'.format(hashlib.sha1(matched.group().encode("utf-8")).hexdigest()[:8])
+    Returns:
 
-    for code in example[code_key]:
-        code = re.sub(rx_str, symbolize_str, code)
-        code = re.sub(rx_char, symbolize_char, code)
-        symbolized_code.append(code)
-    return {f"{code_key}-len": symbolized_code}
-
-
-def symbolize_identifier(example, tokens_key: str = "tokens", tags_key: str = "tags"):
-    symbolized_code = []
-    for tokens, tags in zip(example[tokens_key], example[tags_key]):
-        identifiers = [token for token, tag in zip(tokens, tags) if tag == "identifier"]
-        identifier_map = dict(
-            zip(identifiers, [f"IDENTIFIER_{idx}" for idx in range(len(identifiers))])
-        )
-        new_tokens = [identifier_map.get(token, token) for token in tokens]
-        symbolized_code.append(new_tokens)
-    return {f"{tokens_key}-sym": symbolized_code}
-
-
-def symbolize_str_char(example, tokens_key: str = "tokens", tags_key: str = "tags"):
-    symbolized_code = []
-    for tokens, tags in zip(example[tokens_key], example[tags_key]):
-        new_tokens = [
-            "STRING_{}".format(hashlib.sha1(token.encode("utf-8")).hexdigest()[:8])
-            if "string_literal" in tag
-            else token
-            for token, tag in zip(tokens, tags)
-        ]
-        new_tokens = [
-            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
-            for token, tag in zip(new_tokens, tags)
-        ]
-        symbolized_code.append(new_tokens)
-    return {tokens_key: symbolized_code}
-
-
-def symbolize_str_char2(example, tokens_key: str = "tokens-sym", tags_key: str = "tags"):
-    symbolized_code = []
-    for tokens, tags in zip(example[tokens_key], example[tags_key]):
-        new_tokens = [
-            f"STRING_{len(token) - 2}" if "string_literal" in tag else token
-            for token, tag in zip(tokens, tags)
-        ]
-        new_tokens = [
-            "CHAR_{}".format(token.strip("'")) if "char_literal" in tag else token
-            for token, tag in zip(new_tokens, tags)
-        ]
-        symbolized_code.append(new_tokens)
-    return {tokens_key: symbolized_code}
+    """
+    tmp, w = [], []
+    i = 0
+    while i < len(line):
+        # Ignore spaces and combine previously collected chars to form words
+        if line[i] == " ":
+            tmp.append("".join(w).strip())
+            tmp.append(line[i].strip())
+            w = []
+            i += 1
+        # Check operators and append to final list
+        elif line[i : i + 3] in operators3:
+            tmp.append("".join(w).strip())
+            tmp.append(line[i : i + 3].strip())
+            w = []
+            i += 3
+        elif line[i : i + 2] in operators2:
+            tmp.append("".join(w).strip())
+            tmp.append(line[i : i + 2].strip())
+            w = []
+            i += 2
+        elif line[i] in operators1:
+            tmp.append("".join(w).strip())
+            tmp.append(line[i].strip())
+            w = []
+            i += 1
+        # Character appended to word list
+        else:
+            w.append(line[i])
+            i += 1
+    if len(w) != 0:
+        tmp.append("".join(w).strip())
+        w = []
+    # Filter out irrelevant strings
+    tmp = list(filter(lambda c: (c != "" and c != " "), tmp))
+    # split subtoken
+    res = list()
+    if subtoken:
+        for token in tmp:
+            res.extend(wn.split(token))
+    else:
+        res = tmp
+    return res

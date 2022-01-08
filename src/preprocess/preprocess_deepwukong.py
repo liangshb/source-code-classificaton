@@ -3,16 +3,36 @@ import os
 import pandas as pd
 from datasets import Dataset
 
-from src.preprocess.pipeline import preprocess_pipeline, split_pipeline
+from src.preprocess.deepwukong_symbolizer import tokenize_lines
+from src.preprocess.pipeline import split_pipeline
+from src.preprocess.utils import merge_lines
 
 
 def read_file(file_path: str, vul_label: int, vul_str: str):
     df = pd.read_json(file_path)
-    df = df.drop(columns=["filePathList", "testcaseID"])
+    df = df.rename(columns={"target": "label"})
     df["vul_label"] = df["label"]
     df.loc[df["vul_label"] == 1, "vul_label"] = vul_label
     df["vul_str"] = vul_str
+    nv = df.loc[df["label"] == 0, "label"].count().item()
+    v = df.loc[df["label"] == 1, "label"].count().item()
+    print("Positive: {}, Negative: {}".format(v, nv))
     return df
+
+
+def deepwukong_pipeline(dataset: Dataset):
+    print("=================tokens-sym-no===================")
+    print("tokenize symbolized lines")
+    dataset = dataset.map(
+        lambda example: tokenize_lines(example, "nodes-line-sym", "sym-no"),
+        batched=True,
+    )
+    print("merge lines")
+    dataset = dataset.map(
+        lambda example: merge_lines(example, "tokens-sym-no", "tokens-sym-no"),
+        batched=True,
+    )
+    return dataset
 
 
 def preprocess_deepwukong(data_dir: str, dataset_name: str = "deepwukong"):
@@ -20,8 +40,7 @@ def preprocess_deepwukong(data_dir: str, dataset_name: str = "deepwukong"):
     raw_data_path = os.path.join(dataset_path, "raw_data")
     vul_files = [file for file in os.listdir(raw_data_path) if file.endswith(".json")]
 
-    full_df = pd.DataFrame()
-    for vul_label, file in enumerate(vul_files):
+    for vul_label, file in enumerate(vul_files, start=1):
         print(f"Processing {file}")
         file_path = os.path.join(raw_data_path, file)
         vul_str = file.split(".")[0]
@@ -30,25 +49,14 @@ def preprocess_deepwukong(data_dir: str, dataset_name: str = "deepwukong"):
         if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
             os.makedirs(save_path, exist_ok=True)
             dataset = Dataset.from_pandas(vul_df)
-            dataset = preprocess_pipeline(dataset)
+            dataset = deepwukong_pipeline(dataset)
             dataset_dict = split_pipeline(dataset)
             dataset_dict.save_to_disk(save_path)
             print(f"{vul_str} dataset dict saved")
-        full_df = pd.concat([full_df, vul_df])
-
-    # full dataset
-    save_path = os.path.join(raw_data_path, "full")
-    if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
-        os.makedirs(dataset_path, exist_ok=True)
-        dataset = Dataset.from_pandas(full_df)
-        dataset = preprocess_pipeline(dataset)
-        dataset_dict = split_pipeline(dataset)
-        dataset_dict.save_to_disk(raw_data_path)
-        print("full dataset dict saved")
 
 
 def main():
-    data_dir = "data"
+    data_dir = "../../data"
     dataset_name = ["deepwukong"]
     for name in dataset_name:
         preprocess_deepwukong(data_dir, name)

@@ -16,7 +16,6 @@ Source code classification
 2. [muVulDeePecker](https://github.com/muVulDeePecker/muVulDeePecker): 8:1:1 and 8:2
 3. [VulDeePecker](https://github.com/CGCL-codes/VulDeePecker): 8:1:1 and 8:2
 4. [DeepWukong](https://github.com/DeepWukong/Dataset): 8:1:1
-5. [BufferOverrun](https://github.com/mjc92/buffer_overrun_memory_networks): pre-defined
 6. [D2A](https://github.com/IBM/D2A): pre-defined
 7. [MSR](https://github.com/ZeoVan/MSR_20_Code_vulnerability_CSV_Dataset): 8:1:1
 8. [GHPR](https://github.com/feiwww/GHPR_dataset): 8:1:1

@@ -8,8 +8,8 @@ def cpp_tokenizer(example, key: str = "code", postfix: str = ""):
     tokenizer = CppProcessor(root_folder=os.path.abspath("."))
     outputs = [tokenizer.get_tokens_and_types(code) for code in example[key]]
     return {
-        f"tokens{postfix}": [output[0] for output in outputs],
-        f"tags{postfix}": [output[1] for output in outputs],
+        f"tokens-{postfix}": [output[0] for output in outputs],
+        f"tags-{postfix}": [output[1] for output in outputs],
     }
 
 
@@ -17,6 +17,6 @@ def java_tokenizer(example, key: str = "code", postfix: str = ""):
     tokenizer = JavaProcessor(root_folder=os.path.abspath("."))
     outputs = [tokenizer.get_tokens_and_types(code) for code in example[key]]
     return {
-        f"tokens{postfix}": [output[0] for output in outputs],
-        f"tags{postfix}": [output[1] for output in outputs],
+        f"tokens-{postfix}": [output[0] for output in outputs],
+        f"tags-{postfix}": [output[1] for output in outputs],
     }
