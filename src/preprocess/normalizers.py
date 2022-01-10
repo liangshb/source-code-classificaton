@@ -9,6 +9,17 @@ def normalize_fn(example, key: str = "code"):
     return {key: outputs}
 
 
+def normalize_list_fn(example, key: str = "code"):
+    normalized_code = []
+    for code_lines in example[key]:
+        outputs = [remove_comments(code) for code in code_lines]
+        outputs = [remove_non_ascii(code) for code in outputs]
+        outputs = [remove_space_before_newline(code) for code in outputs]
+        outputs = [remove_empty_lines(code) for code in outputs]
+        normalized_code.append(outputs)
+    return {key: normalized_code}
+
+
 # regex to remove empty lines
 def remove_empty_lines(text):
     return re.sub(r"^$\n", "", text, flags=re.MULTILINE)

@@ -6,9 +6,9 @@ local validation_data_path = "data/sysevr/%s/validation" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
 
 // hyperparameters
-local tokens_key = "tokens-hash";
-local min_count = {"tokens": 3};
-local embedding_dim = 50;
+local tokens_key = "merged-tokens-sym";
+local min_count = {"tokens": 1};
+local embedding_dim = 64;
 local num_filters = 200;
 local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;

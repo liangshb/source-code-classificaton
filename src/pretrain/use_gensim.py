@@ -7,7 +7,8 @@ from gensim.models import FastText, Word2Vec
 
 def main(dataset_path):
     pretrain_types = {"fasttext": FastText, "word2vec": Word2Vec}
-    token_types = {"tokens-sym-no"}
+    # token_types = {"tokens-sym-no"}
+    token_types = {"merged-tokens-sym"}
     embedding_dims = (64, 128)
 
     train_corpus = load_from_disk(os.path.join(dataset_path, "train"))

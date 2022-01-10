@@ -6,9 +6,9 @@ local validation_data_path = "data/sysevr/%s/validation" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
 
 // hyperparameters
-local token_key = "tokens";
-local min_count = {"tokens": 3};
-local embedding_dim = 50;
+local tokens_key = "merged-tokens-sym";
+local min_count = {"tokens": 1};
+local embedding_dim = 64;
 local input_size = embedding_dim;
 local hidden_size = 100;
 local num_layers = 2;
@@ -29,7 +29,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "token_key": token_key
+    "tokens_key": tokens_key
   },
   "vocabulary": {
     "type": "from_instances",
