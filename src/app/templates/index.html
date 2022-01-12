@@ -406,6 +406,26 @@
         background: #e1e5ea;
         left: 0.5em;
       }
+      #output2 {
+        display: flex;
+        align-items: center;
+      }
+      #statement_list li {
+        display: flex;
+        align-items: center;
+        margin-top: 0%;
+        margin-bottom: 0%;
+      }
+      .sentence {
+        padding-left: 32px;
+      }
+      .words-container {
+        width: 100%;
+      }
+      .word {
+        display: inline-block;
+        padding: 0 4px;
+      }
     </style>
   </head>
   <body>
@@ -417,7 +437,11 @@
             <div class="model__content">
               <div class="form__field">
                 <label for="input-tokens">tokens</label>
-                <textarea rows="30" id="input-tokens" placeholder="input goes here">
+                <textarea
+                  rows="30"
+                  id="input-tokens"
+                  placeholder="input goes here"
+                >
                 </textarea>
               </div>
               <div class="form__field form__field--btn">
@@ -453,16 +477,12 @@
                 </div>
               </div>
             </div>
-            <hr>
+            <hr />
             <h2><span>Saliency map</span></h2>
             <div id="output2" class="output">
-              <div class="placeholder">
-                <div class="placeholder__content">
-                  <p>Run model to view results</p>
-                </div>
-              </div>
+              <ul id="statement_list"></ul>
             </div>
-            <hr>
+            <hr />
             <h2><span>Attacker</span></h2>
             <div id="output3" class="output">
               <div class="placeholder">
@@ -518,13 +538,49 @@
         if (xhr.status == 200) {
           // If you want a more impressive visualization than just
           // outputting the raw JSON, change this part of the code.
-          var htmlResults =
-            "<pre>" +
-            JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-            "</pre>";
-          document.getElementById("output2").innerHTML = htmlResults;
+          const grads = JSON.parse(xhr.responseText)["instance_1"]["grad_input_1"]
+          const statement_list = document.getElementById("statement_list");
+          let statements = data["tokens"].split("\n");
+          let statements_tokens = [];
+          let grads_tokens = [];
+          let start = 0;
+          for (let i = 0; i < statements.length; i++) {
+            statements_tokens.push(statements[i].split(" "));
+            grads_tokens.push(grads.slice(start, start + statements_tokens[i].length))
+            start += statements_tokens[i].length
+          }
+          while(statement_list.firstChild) {
+            statement_list.removeChild(statement_list.firstChild)
+          }
+          for (let i = 0; i < statements_tokens.length; i++) {
+            statement_list.appendChild(
+              createSentenceElement(grads_tokens[i], statements_tokens[i])
+            );
+          }
+          // var htmlResults =
+          //   "<pre>" +
+          //   JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
+          //   "</pre>";
+          // document.getElementById("output2").innerHTML = htmlResults;
         }
       };
+      // data["tokens"] = "kwkw ok ???\nok ?? haha\n??? kwkw ok";
+      // const statement_list = document.getElementById("statement_list");
+      // const grads = [
+      //   [0.1, 0.2, 0, 3],
+      //   [0.0, 0.1, 0.0],
+      //   [0.1, 0.1, 0.1]
+      // ];
+      // let statements = data["tokens"].split("\n");
+      // let statements_tokens = [];
+      // for (let i = 0; i < statements.length; i++) {
+      //   statements_tokens.push(statements[i].split(" "));
+      // }
+      // for (let i = 0; i < statements_tokens.length; i++) {
+      //   statement_list.appendChild(
+      //     createSentenceElement(grads[i], statements_tokens[i])
+      //   );
+      // }
       xhr.send(JSON.stringify(data));
     }
     function attacker() {
@@ -550,5 +606,38 @@
       };
       xhr.send(JSON.stringify(data));
     }
+    let createSentenceElement = function (sa, statement_tokens) {
+      let sentenceElement = document.createElement("li");
+      sentenceElement.className = "sentence";
+      const sum = sa.reduce((a, b) => a + b);
+      sentenceElement.style.backgroundColor =
+        getSentenceColorForActivation(sum);
+
+      let wordsContainer = document.createElement("div");
+      wordsContainer.className = "words-container";
+      wordsContainer.style.backgroundColor = "white";
+      for (let i = 0; i < statement_tokens.length; i++) {
+        let a = sa[i];
+        let w = statement_tokens[i];
+        wordsContainer.appendChild(createWordElement(w, a));
+      }
+      sentenceElement.appendChild(wordsContainer);
+
+      return sentenceElement;
+    };
+    let createWordElement = function (w, a) {
+      let wordElement = document.createElement("div");
+      wordElement.className = "word";
+      wordElement.style.backgroundColor = getWordColorForActivation(a);
+      wordElement.innerHTML = w;
+      return wordElement;
+    };
+    let getSentenceColorForActivation = function (a) {
+      return `rgba(0, 0, 255, ${a})`;
+    };
+
+    let getWordColorForActivation = function (a) {
+      return `rgba(255, 0, 0, ${a})`;
+    };
   </script>
 </html>
