@@ -1,6 +1,6 @@
 local batch_size = 128;
 local num_epochs = 100;
-local dataset = "API_function_call";
+local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
 local validation_data_path = "data/sysevr/%s/validation" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];

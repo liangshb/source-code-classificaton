@@ -3,7 +3,8 @@ from typing import Dict
 import torch
 from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models import Model
-from allennlp.modules import Seq2VecEncoder, TextFieldEmbedder
+from allennlp.modules.seq2vec_encoders.seq2vec_encoder import Seq2VecEncoder
+from allennlp.modules.text_field_embedders.text_field_embedder import TextFieldEmbedder
 from allennlp.nn import util
 from allennlp.training.metrics import Auc, CategoricalAccuracy, F1Measure
 from torchmetrics import MatthewsCorrcoef, Specificity
