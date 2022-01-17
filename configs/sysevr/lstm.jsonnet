@@ -2,7 +2,7 @@ local batch_size = 128;
 local num_epochs = 100;
 local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
-local validation_data_path = "data/sysevr/%s/validation" % [dataset];
+local validation_data_path = "data/sysevr/%s/val_test" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
 
 // hyperparameters

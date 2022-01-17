@@ -1,6 +1,6 @@
-local batch_size = 128;
+local batch_size = 64;
 local num_epochs = 100;
-local dataset = "Array_usage";
+local dataset = "Arithmetic_expression";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
 local validation_data_path = "data/sysevr/%s/val_test" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
@@ -9,12 +9,12 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local filters = [[5, 200], [6, 200], [7, 200], [8, 200]];
-local num_highway = 2;
-local projection_dim = 100;
-local activation = "relu";
-local projection_location = "after_highway";
-local do_layer_norm = true;
+local capacity_factor = 1.0;
+local drop_tokens = true;
+local is_scale_prob = true;
+local n_experts = 10;
+local num_heads = 8;
+local ff_dim = 64;
 local dropout = 0.1;
 
 // train
@@ -30,7 +30,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "tokens_key": tokens_key
+    "tokens_key": tokens_key,
   },
   "vocabulary": {
     "type": "from_instances",
@@ -40,8 +40,8 @@ local weight_decay = 0.0005;
   "validation_data_path": validation_data_path,
   "test_data_path": test_data_path,
   "model": {
-    "type": "classifier",
-    "embedder": {
+    "type": "classifier-plus",
+    "text_field_embedder": {
       "token_embedders": {
         "tokens": {
           "type": "embedding",
@@ -49,15 +49,36 @@ local weight_decay = 0.0005;
         }
       }
     },
-    "encoder": {
-      "type": "cnn-highway",
+    "seq2vec_encoder": {
+      "type": "boe",
       "embedding_dim": embedding_dim,
-      "filters": filters,
-      "num_highway": num_highway,
-      "projection_dim": projection_dim,
-      "activation": activation,
-      "projection_location": projection_location,
-      "do_layer_norm": do_layer_norm
+      "averaged": true
+    },
+    "seq2seq_encoder": {
+      "type": "switch-transformer",
+      "layer": {
+        "input_dim": embedding_dim,
+        "attn": {
+          "num_heads": 4,
+          "input_dim": 64,
+          "dropout": 0.1
+        },
+        "feed_forward": {
+          "capacity_factor": 1.0,
+          "drop_tokens": true,
+          "is_scale_prob": true,
+          "n_experts": 10,
+          "expert": {
+            "input_dim": embedding_dim,
+            "hidden_dim": embedding_dim,
+            "dropout": 0.1
+          },
+          d_model: embedding_dim
+        },
+        dropout1: 0.1,
+        dropout2: 0.1
+      },
+      "n_layers": 1,
     },
     "dropout": dropout
   },
