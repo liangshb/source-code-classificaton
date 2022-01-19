@@ -9,7 +9,7 @@ def main(dataset_path):
     pretrain_types = {"fasttext": FastText, "word2vec": Word2Vec}
     # token_types = {"tokens-sym-no"}
     token_types = {"merged-tokens-sym"}
-    embedding_dims = (64, 128)
+    embedding_dims = (32, 64)
 
     train_corpus = load_from_disk(os.path.join(dataset_path, "train"))
     embedding_path = os.path.join(dataset_path, "embedding")

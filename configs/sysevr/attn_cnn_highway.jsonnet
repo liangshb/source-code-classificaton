@@ -1,6 +1,6 @@
 local batch_size = 64;
 local num_epochs = 100;
-local dataset = "Arithmetic_expression";
+local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
 local validation_data_path = "data/sysevr/%s/val_test" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
@@ -9,18 +9,22 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local embedding_dropout = 0.1;
-local num_heads = 8;
-local attn_dropout = 0.1;
-local capacity_factor = 1.0;
-local drop_tokens = true;
-local is_scale_prob = false;
-local num_experts = 10;
-local expert_dropout = 0.1;
+local pretrained_file = "data/sysevr/%s/embedding/fasttext_%s_merged-tokens-sym.txt" % [dataset, embedding_dim];
+local hidden_dim = 64;
+local projection_dim = 64;
+local feedforward_hidden_dim= 64;
 local num_layers = 1;
-local layer_dropout1 = 0.1;
-local layer_dropout2 = 0.1;
-local ff_hidden_dim = 64;
+local num_attention_heads = 4;
+local attn_dropout1 = 0.1;
+local attn_dropout2 = 0.2;
+local attn_dropout3 = 0.1;
+local num_filters = 128;
+local ngram_filter_sizes = [5, 6, 7, 8];
+local num_highway = 2;
+local projection_dim = 64;
+local activation = "relu";
+local projection_location = "after_highway";
+local do_layer_norm = true;
 local dropout = 0.1;
 
 // train
@@ -51,41 +55,33 @@ local weight_decay = 0.0005;
       "token_embedders": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": embedding_dim
+          "embedding_dim": embedding_dim,
+          "pretrained_file": pretrained_file
         }
       }
     },
     "seq2vec_encoder": {
-      "type": "boe",
-      "embedding_dim": embedding_dim,
-      "averaged": true
+      "type": "cnn-highway-mask",
+      "embedding_dim": hidden_dim,
+      "num_filters": num_filters,
+      "ngram_filter_sizes": ngram_filter_sizes,
+      "num_highway": num_highway,
+      "projection_dim": projection_dim,
+      "activation": activation,
+      "projection_location": projection_location,
+      "do_layer_norm": do_layer_norm
     },
     "seq2seq_encoder": {
-      "type": "switch",
-      "embedding_dropout": embedding_dropout,
-      "layer": {
-        "input_dim": embedding_dim,
-        "attn": {
-          "num_heads": num_heads,
-          "input_dim": embedding_dim,
-          "dropout": attn_dropout
-        },
-        "feed_forward": {
-          "input_dim": embedding_dim,
-          "capacity_factor": capacity_factor,
-          "drop_tokens": drop_tokens,
-          "is_scale_prob": is_scale_prob,
-          "num_experts": num_experts,
-          "expert": {
-            "input_dim": embedding_dim,
-            "hidden_dim": ff_hidden_dim,
-            "dropout": expert_dropout
-          }
-        },
-        dropout1: layer_dropout1,
-        dropout2: layer_dropout2
-      },
+      "type": "stacked_self_attention",
+      "input_dim": embedding_dim,
+      "hidden_dim": hidden_dim,
+      "projection_dim": projection_dim,
+      "feedforward_hidden_dim": feedforward_hidden_dim,
       "num_layers": num_layers,
+      "num_attention_heads": num_attention_heads,
+      "dropout_prob": attn_dropout1,
+      "residual_dropout_prob": attn_dropout2,
+      "attention_dropout_prob": attn_dropout3
     },
     "dropout": dropout
   },
@@ -111,5 +107,5 @@ local weight_decay = 0.0005;
       "patience": 2
     }
   },
-  "evaluate_on_test": true
+  "evaluate_on_test": true,
 }

@@ -9,18 +9,17 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local embedding_dropout = 0.1;
-local num_heads = 8;
-local attn_dropout = 0.1;
-local capacity_factor = 1.0;
-local drop_tokens = true;
-local is_scale_prob = false;
-local num_experts = 10;
-local expert_dropout = 0.1;
+local pretrained_file = "data/sysevr/%s/embedding/fasttext_%s_merged-tokens-sym.txt" % [dataset, embedding_dim];
 local num_layers = 1;
-local layer_dropout1 = 0.1;
-local layer_dropout2 = 0.1;
-local ff_hidden_dim = 64;
+local rnn_dropout = 0.1;
+local bidirectional = true;
+local num_filters = 200;
+local ngram_filter_sizes = [5, 6, 7, 8];
+local num_highway = 2;
+local projection_dim = 64;
+local activation = "relu";
+local projection_location = "after_highway";
+local do_layer_norm = true;
 local dropout = 0.1;
 
 // train
@@ -51,7 +50,8 @@ local weight_decay = 0.0005;
       "token_embedders": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": embedding_dim
+          "embedding_dim": embedding_dim,
+          "pretrained_file": pretrained_file
         }
       }
     },
@@ -61,31 +61,15 @@ local weight_decay = 0.0005;
       "averaged": true
     },
     "seq2seq_encoder": {
-      "type": "switch",
-      "embedding_dropout": embedding_dropout,
-      "layer": {
-        "input_dim": embedding_dim,
-        "attn": {
-          "num_heads": num_heads,
-          "input_dim": embedding_dim,
-          "dropout": attn_dropout
-        },
-        "feed_forward": {
-          "input_dim": embedding_dim,
-          "capacity_factor": capacity_factor,
-          "drop_tokens": drop_tokens,
-          "is_scale_prob": is_scale_prob,
-          "num_experts": num_experts,
-          "expert": {
-            "input_dim": embedding_dim,
-            "hidden_dim": ff_hidden_dim,
-            "dropout": expert_dropout
-          }
-        },
-        dropout1: layer_dropout1,
-        dropout2: layer_dropout2
-      },
-      "num_layers": num_layers,
+      "type": "qanet_encoder",
+      "input_dim": embedding_dim,
+      "hidden_dim": embedding_dim,
+      "attention_projection_dim": embedding_dim,
+      "feedforward_hidden_dim": embedding_dim,
+      "num_blocks": 1,
+      "num_convs_per_block": 2,
+      "conv_kernel_size": 5,
+      "num_attention_heads": 4,
     },
     "dropout": dropout
   },

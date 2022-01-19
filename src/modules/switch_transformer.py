@@ -10,6 +10,8 @@ from labml_nn.transformers.feed_forward import FeedForward
 from labml_nn.transformers.mha import MultiHeadAttention
 from labml_nn.utils import clone_module_list
 
+from src.utils import get_forward_attention_mask
+
 
 class FeedForwardWrapper(FeedForward, FromParams, ABC):
     def __init__(
@@ -38,46 +40,39 @@ class FeedForwardWrapper(FeedForward, FromParams, ABC):
 class SwitchFeedForward(nn.Module, FromParams, ABC):
     def __init__(
         self,
-        *,
+        input_dim: int,
         capacity_factor: float,
         drop_tokens: bool,
         is_scale_prob: bool,
-        n_experts: int,
+        num_experts: int,
         expert: FeedForwardWrapper,
-        d_model: int
     ):
         """
+        * `input_dim` is the input dimension
         * `capacity_factor` is the capacity of each expert as a factor relative to ideally balanced load
         * `drop_tokens` specifies whether to drop tokens if more tokens are routed to an expert than the capacity
         * `is_scale_prob` specifies whether to multiply the input to the FFN by the routing probability
         * `n_experts` is the number of experts
         * `expert` is the expert layer, a [FFN module](../feed_forward.html)
-        * `d_model` is the number of features in a token embedding
-        * `d_ff` is the number of features in the hidden layer of the FFN
-        * `dropout` is dropout probability in the FFN
         """
         super().__init__()
 
         self.capacity_factor = capacity_factor
         self.is_scale_prob = is_scale_prob
-        self.n_experts = n_experts
+        self.num_experts = num_experts
         self.drop_tokens = drop_tokens
 
         # make copies of the FFNs
-        self.experts = clone_module_list(expert, n_experts)
+        self.experts = clone_module_list(expert, num_experts)
         # Routing layer and softmax
-        self.switch = nn.Linear(d_model, n_experts)
+        self.switch = nn.Linear(input_dim, num_experts)
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x: torch.Tensor):
-        """
-        * `x` is the input to the switching module with shape `[seq_len, batch_size, d_model]`
-        """
-
         # Capture the shape to change shapes later
-        seq_len, batch_size, d_model = x.shape
+        seq_len, batch_size, input_dim = x.shape
         # Flatten the sequence and batch dimensions
-        x = x.view(-1, d_model)
+        x = x.view(-1, input_dim)
 
         # Get routing probabilities for each of the tokens.
         # $$p_i(x) = \frac{e^{h(x)_i}}{\sum^N_j e^{h(x)_j}}$$
@@ -91,7 +86,7 @@ class SwitchFeedForward(nn.Module, FromParams, ABC):
 
         # Get indexes of tokens going to each expert
         indexes_list = [
-            torch.eq(routes, i).nonzero(as_tuple=True)[0] for i in range(self.n_experts)
+            torch.nonzero(torch.eq(routes, i), as_tuple=True)[0] for i in range(self.num_experts)
         ]
 
         # Initialize an empty tensor to store outputs
@@ -101,16 +96,16 @@ class SwitchFeedForward(nn.Module, FromParams, ABC):
         # $$\mathrm{expert\;capacity} =
         # \frac{\mathrm{tokens\;per\;batch}}{\mathrm{number\;of\;experts}}
         # \times \mathrm{capacity\;factor}$$
-        capacity = int(self.capacity_factor * len(x) / self.n_experts)
+        capacity = int(self.capacity_factor * len(x) / self.num_experts)
         # Number of tokens routed to each expert.
-        counts = x.new_tensor([len(indexes_list[i]) for i in range(self.n_experts)])
+        counts = x.new_tensor([len(indexes_list[i]) for i in range(self.num_experts)])
 
         # Initialize an empty list of dropped tokens
         dropped = []
         # Only drop tokens if `drop_tokens` is `True`.
         if self.drop_tokens:
             # Drop tokens in each of the experts
-            for i in range(self.n_experts):
+            for i in range(self.num_experts):
                 # Ignore if the expert is not over capacity
                 if len(indexes_list[i]) <= capacity:
                     continue
@@ -122,10 +117,10 @@ class SwitchFeedForward(nn.Module, FromParams, ABC):
                 indexes_list[i] = indexes_list[i][:capacity]
 
         # Get outputs of the expert FFNs
-        expert_output = [self.experts[i](x[indexes_list[i], :]) for i in range(self.n_experts)]
+        expert_output = [self.experts[i](x[indexes_list[i], :]) for i in range(self.num_experts)]
 
         # Assign to final output
-        for i in range(self.n_experts):
+        for i in range(self.num_experts):
             final_output[indexes_list[i], :] = expert_output[i]
 
         # Pass through the dropped tokens
@@ -142,7 +137,7 @@ class SwitchFeedForward(nn.Module, FromParams, ABC):
             final_output = final_output * (route_prob_max / route_prob_max.detach()).view(-1, 1)
 
         # Change the shape of the final output back to `[seq_len, batch_size, d_model]`
-        final_output = final_output.view(seq_len, batch_size, d_model)
+        final_output = final_output.view(seq_len, batch_size, input_dim)
 
         # Return
         #
@@ -178,12 +173,13 @@ class SwitchTransformerLayer(nn.Module, FromParams, ABC):
     ):
         super().__init__()
         self.input_dim = input_dim
+        self.output_dim = input_dim
         self.attn = attn
         self.feed_forward = feed_forward
         self.dropout1 = nn.Dropout(dropout1)
         self.dropout2 = nn.Dropout(dropout2)
-        self.norm_self_attn = nn.LayerNorm([input_dim])
-        self.norm_ff = nn.LayerNorm([input_dim])
+        self.norm_self_attn = nn.LayerNorm([self.output_dim])
+        self.norm_ff = nn.LayerNorm([self.output_dim])
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor):
         # Normalize the vectors before doing self attention
@@ -206,25 +202,26 @@ class SwitchTransformerLayer(nn.Module, FromParams, ABC):
         return self.input_dim
 
     def get_output_dim(self):
-        return self.input_dim
+        return self.output_dim
 
 
-@Seq2SeqEncoder.register("switch-transformer")
-class SwitchTransformer(nn.Module, FromParams, ABC):
-    def __init__(self, layer: SwitchTransformerLayer, n_layers: int):
+@Seq2SeqEncoder.register("switch")
+class SwitchEncoder(Seq2SeqEncoder):
+    def __init__(self, embedding_dropout, layer: SwitchTransformerLayer, num_layers: int):
         super().__init__()
         self.input_dim = layer.get_input_dim()
         self.output_dim = layer.get_output_dim()
-        self.post_encoding = SinusoidalPositionalEncoding()
+        self.position_embedding = SinusoidalPositionalEncoding()
+        self.embedding_dropout = nn.Dropout(embedding_dropout)
         # Make copies of the transformer layer
-        self.layers = clone_module_list(layer, n_layers)
+        self.layers = clone_module_list(layer, num_layers)
         # Final normalization layer
         self.norm = nn.LayerNorm([layer.input_dim])
 
     def forward(self, x: torch.Tensor, mask: torch.Tensor):
         mask = torch.permute(mask, (1, 0))
         mask = torch.unsqueeze(mask, 0)
-        x = self.post_encoding(x)
+        x = self.position_embedding(x)
         x = torch.permute(x, (1, 0, 2))
         # Run through each transformer layer
         counts, route_prob, n_dropped, route_prob_max = [], [], [], []
@@ -236,14 +233,6 @@ class SwitchTransformer(nn.Module, FromParams, ABC):
             route_prob_max.append(p_max)
         # Finally, normalize the vectors
         x = self.norm(x)
-        #
-        # return (
-        #     x,
-        #     torch.stack(counts),
-        #     torch.stack(route_prob),
-        #     n_dropped,
-        #     torch.stack(route_prob_max),
-        # )
         return torch.permute(x, (1, 0, 2))
 
     def get_input_dim(self) -> int:
@@ -251,3 +240,6 @@ class SwitchTransformer(nn.Module, FromParams, ABC):
 
     def get_output_dim(self) -> int:
         return self.output_dim
+
+    def is_bidirectional(self) -> bool:
+        return False
