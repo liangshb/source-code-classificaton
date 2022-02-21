@@ -1,0 +1,23 @@
+{
+  "dataset_reader": {
+    "type": "multitask",
+    "readers": {
+      "cls_task": {
+        "type": "reader",
+        "token_indexers": {
+          "tokens": {
+            "type": "single_id",
+            "namespace": "tokens"
+          }
+        },
+        "tokens_key": "$$tokens_key"
+      },
+      "tag_task": {
+        "type": "reader"
+      },
+      "score_task": {
+        "type": "reader"
+      }
+    }
+  }
+}

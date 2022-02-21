@@ -1,4 +1,7 @@
+import os
 import re
+
+from src.preprocess.codegen.cpp_processor import CppProcessor
 
 
 def tokenize_fn(example, code_key: str = "code", tokens_key: str = "tokens"):
@@ -10,6 +13,22 @@ def tokenize_fn(example, code_key: str = "code", tokens_key: str = "tokens"):
             lines_tokens.append(tokens)
         tokens_list.append(lines_tokens)
     return {tokens_key: tokens_list}
+
+
+def tokenize_fn_tree_sitter(example, code_key: str = "code", tokens_key: str = "tokens"):
+    tokens_list = []
+    tags_list = []
+    tokenizer = CppProcessor(root_folder=os.path.abspath("."))
+    for lines in example[code_key]:
+        lines_tokens = []
+        lines_tags = []
+        for line in lines:
+            ret = tokenizer.get_tokens_and_types(line)
+            lines_tokens.append(ret[0])
+            lines_tags.append(ret[1])
+        tokens_list.append(lines_tokens)
+        tags_list.append(lines_tags)
+    return {tokens_key: tokens_list, "tags": tags_list}
 
 
 def isphor(s, liter):

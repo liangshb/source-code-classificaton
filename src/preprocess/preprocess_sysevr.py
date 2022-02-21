@@ -79,9 +79,15 @@ def read_file_mu(file_path: str):
     return all_examples
 
 
-def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr"):
+def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr", with_tags=False):
     dataset_path = os.path.join(data_dir, dataset_name)
     raw_data_path = os.path.join(dataset_path, "raw_data")
+    if with_tags:
+        tree_sitter = True
+        save_path_base = os.path.join(dataset_path, "with_tags")
+    else:
+        tree_sitter = False
+        save_path_base = dataset_path
     vul_files = [file for file in os.listdir(raw_data_path) if file.endswith(".txt")]
 
     full_examples = []
@@ -90,37 +96,45 @@ def preprocess_sysevr(data_dir: str, dataset_name: str = "sysevr"):
         file_path = os.path.join(raw_data_path, file)
         vul_str = file.split(".")[0]
         vul_examples = read_file(file_path, vul_label, vul_str)
-        save_path = os.path.join(dataset_path, vul_str)
+        save_path = os.path.join(save_path_base, vul_str)
         if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
             os.makedirs(save_path, exist_ok=True)
             dataset = Dataset.from_pandas(pd.DataFrame(vul_examples))
-            dataset = sysevr_pipeline(dataset)
+            dataset = sysevr_pipeline(dataset, tree_sitter=tree_sitter)
             dataset_dict = split_pipeline(dataset)
             dataset_dict.save_to_disk(save_path)
             print(f"{vul_str} dataset dict saved")
         full_examples += vul_examples
 
     # full dataset
-    save_path = os.path.join(dataset_path, "full")
+    save_path = os.path.join(save_path_base, "full")
     if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
         os.makedirs(save_path, exist_ok=True)
         dataset = Dataset.from_pandas(pd.DataFrame(full_examples))
-        dataset = sysevr_pipeline(dataset)
+        dataset = sysevr_pipeline(dataset, tree_sitter=tree_sitter)
         dataset_dict = split_pipeline(dataset)
         dataset_dict.save_to_disk(save_path)
         print("full dataset dict saved")
 
 
-def preprocess_muvuldeepecker(data_dir: str, dataset_name: str = "muvuldeepecker"):
+def preprocess_muvuldeepecker(
+    data_dir: str, dataset_name: str = "muvuldeepecker", with_tags=False
+):
     dataset_path = os.path.join(data_dir, dataset_name)
     raw_data_path = os.path.join(dataset_path, "raw_data")
-    save_path = os.path.join(dataset_path, "full")
+    if with_tags:
+        tree_sitter = True
+        save_path_base = os.path.join(dataset_path, "with_tags")
+    else:
+        tree_sitter = False
+        save_path_base = dataset_path
+    save_path = os.path.join(save_path_base, "full")
     vul_file = os.path.join(raw_data_path, "mvd.txt")
     if not os.path.exists(os.path.join(save_path, "dataset_dict.json")):
         os.makedirs(save_path, exist_ok=True)
         vul_examples = read_file_mu(vul_file)
         dataset = Dataset.from_pandas(pd.DataFrame(vul_examples))
-        dataset = sysevr_pipeline(dataset)
+        dataset = sysevr_pipeline(dataset, tree_sitter=tree_sitter)
         dataset_dict = split_pipeline(dataset)
         dataset_dict.save_to_disk(save_path)
         print("full dataset dict saved")
@@ -129,12 +143,13 @@ def preprocess_muvuldeepecker(data_dir: str, dataset_name: str = "muvuldeepecker
 def main():
     data_dir = "../../data"
     dataset_name = ["sysevr", "vuldeepecker", "muvuldeepecker"]
+    with_tags = True
     for name in dataset_name:
         print(f"======================Processing {name}==========================")
         if name == "muvuldeepecker":
-            preprocess_muvuldeepecker(data_dir)
+            preprocess_muvuldeepecker(data_dir, with_tags=with_tags)
         else:
-            preprocess_sysevr(data_dir, name)
+            preprocess_sysevr(data_dir, name, with_tags=with_tags)
 
 
 if __name__ == "__main__":
