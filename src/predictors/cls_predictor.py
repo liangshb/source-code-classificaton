@@ -10,7 +10,12 @@ from allennlp.predictors import Predictor
 @Predictor.register("predictor")
 class CLSPredictor(Predictor):
     def predict(self, tokens: str) -> JsonDict:
-        return self.predict_json({"tokens": tokens})
+        with self.capture_model_internals("encoder.attention") as internals:
+            outputs = self.predict_json({"tokens": tokens})
+        if internals:
+            ((_, attention),) = internals.items()
+            outputs["attention"] = attention["output"][0]
+        return outputs
 
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         tokens = json_dict["tokens"].split()

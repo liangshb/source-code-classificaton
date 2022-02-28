@@ -34,7 +34,7 @@ def make_app(
             return Response(response="", status=200)
 
         data = request.get_json()
-        prediction = predictor.predict_json(data)
+        prediction = predictor.predict(data["tokens"])
         log_blob = {"inputs": data, "outputs": prediction}
         logger.info("prediction: %s", json.dumps(log_blob))
         return jsonify(prediction)
