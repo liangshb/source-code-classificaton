@@ -9,11 +9,13 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local num_layers = 1;
-local rnn_dropout = 0.1;
-local bidirectional = true;
-local num_filters = 200;
+local num_filters = 128;
 local ngram_filter_sizes = [5, 6, 7, 8];
+local num_highway = 2;
+local projection_dim = 64;
+local activation = "relu";
+local projection_location = "after_highway";
+local do_layer_norm = true;
 local dropout = 0.1;
 
 // train
@@ -29,7 +31,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "tokens_key": tokens_key,
+    "tokens_key": tokens_key
   },
   "vocabulary": {
     "type": "from_instances",
@@ -39,8 +41,8 @@ local weight_decay = 0.0005;
   "validation_data_path": validation_data_path,
   "test_data_path": test_data_path,
   "model": {
-    "type": "classifier-plus",
-    "text_field_embedder": {
+    "type": "classifier",
+    "embedder": {
       "token_embedders": {
         "tokens": {
           "type": "embedding",
@@ -48,19 +50,16 @@ local weight_decay = 0.0005;
         }
       }
     },
-    "seq2vec_encoder": {
-      "type": "cnn",
-      "embedding_dim": embedding_dim * 2,
+    "encoder": {
+      "type": "cnn-highway-mask",
+      "embedding_dim": embedding_dim,
       "num_filters": num_filters,
       "ngram_filter_sizes": ngram_filter_sizes,
-    },
-    "seq2seq_encoder": {
-      "type": "gru",
-      "input_size": embedding_dim,
-      "hidden_size": embedding_dim,
-      "num_layers": num_layers,
-      "dropout": rnn_dropout,
-      "bidirectional": bidirectional
+      "num_highway": num_highway,
+      "projection_dim": projection_dim,
+      "activation": activation,
+      "projection_location": projection_location,
+      "do_layer_norm": do_layer_norm
     },
     "dropout": dropout
   },
@@ -84,7 +83,12 @@ local weight_decay = 0.0005;
       "factor": 0.5,
       "mode": "max",
       "patience": 2
-    }
+    },
+    "callbacks": [
+      {
+        "type": "tensorboard"
+      }
+    ]
   },
   "evaluate_on_test": true
 }

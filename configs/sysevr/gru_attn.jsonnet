@@ -9,12 +9,11 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local filters = [[5, 200], [6, 200], [7, 200], [8, 200]];
-local num_highway = 2;
-local projection_dim = 100;
-local activation = "relu";
-local projection_location = "after_highway";
-local do_layer_norm = true;
+local input_size = embedding_dim;
+local hidden_size = 128;
+local num_layers = 1;
+local bidirectional = true;
+local rnn_dropout = 0.0;
 local dropout = 0.1;
 
 // train
@@ -50,14 +49,20 @@ local weight_decay = 0.0005;
       }
     },
     "encoder": {
-      "type": "cnn-highway",
-      "embedding_dim": embedding_dim,
-      "filters": filters,
-      "num_highway": num_highway,
-      "projection_dim": projection_dim,
-      "activation": activation,
-      "projection_location": projection_location,
-      "do_layer_norm": do_layer_norm
+      "type": "rnn-attn",
+      "seq2seq_encoder": {
+        "type": "gru",
+        "input_size": input_size,
+        "hidden_size": hidden_size,
+        "num_layers": num_layers,
+        "dropout": rnn_dropout,
+        "bidirectional": bidirectional
+      },
+      "attention": {
+        "type": "additive",
+        "vector_dim": hidden_size * 2,
+        "matrix_dim": hidden_size * 2
+      }
     },
     "dropout": dropout
   },
@@ -81,7 +86,12 @@ local weight_decay = 0.0005;
       "factor": 0.5,
       "mode": "max",
       "patience": 2
-    }
+    },
+    "callbacks": [
+      {
+        "type": "tensorboard"
+      }
+    ]
   },
   "evaluate_on_test": true
 }

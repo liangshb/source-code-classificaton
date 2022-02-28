@@ -1,6 +1,6 @@
-local batch_size = 64;
+local batch_size = 128;
 local num_epochs = 100;
-local dataset = "Arithmetic_expression";
+local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
 local validation_data_path = "data/sysevr/%s/val_test" % [dataset];
 local test_data_path = "data/sysevr/%s/test" % [dataset];
@@ -9,18 +9,11 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local embedding_dropout = 0.1;
-local num_heads = 8;
-local attn_dropout = 0.1;
-local capacity_factor = 1.0;
-local drop_tokens = true;
-local is_scale_prob = false;
-local num_experts = 10;
-local expert_dropout = 0.1;
+local input_size = embedding_dim;
+local hidden_size = 128;
 local num_layers = 1;
-local layer_dropout1 = 0.1;
-local layer_dropout2 = 0.1;
-local ff_hidden_dim = 64;
+local bidirectional = true;
+local rnn_dropout = 0.0;
 local dropout = 0.1;
 
 // train
@@ -36,7 +29,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "tokens_key": tokens_key,
+    "tokens_key": tokens_key
   },
   "vocabulary": {
     "type": "from_instances",
@@ -46,8 +39,8 @@ local weight_decay = 0.0005;
   "validation_data_path": validation_data_path,
   "test_data_path": test_data_path,
   "model": {
-    "type": "classifier-plus",
-    "text_field_embedder": {
+    "type": "classifier",
+    "embedder": {
       "token_embedders": {
         "tokens": {
           "type": "embedding",
@@ -55,37 +48,21 @@ local weight_decay = 0.0005;
         }
       }
     },
-    "seq2vec_encoder": {
-      "type": "boe",
-      "embedding_dim": embedding_dim,
-      "averaged": true
-    },
-    "seq2seq_encoder": {
-      "type": "switch",
-      "embedding_dropout": embedding_dropout,
-      "layer": {
-        "input_dim": embedding_dim,
-        "attn": {
-          "num_heads": num_heads,
-          "input_dim": embedding_dim,
-          "dropout": attn_dropout
-        },
-        "feed_forward": {
-          "input_dim": embedding_dim,
-          "capacity_factor": capacity_factor,
-          "drop_tokens": drop_tokens,
-          "is_scale_prob": is_scale_prob,
-          "num_experts": num_experts,
-          "expert": {
-            "input_dim": embedding_dim,
-            "hidden_dim": ff_hidden_dim,
-            "dropout": expert_dropout
-          }
-        },
-        dropout1: layer_dropout1,
-        dropout2: layer_dropout2
+    "encoder": {
+      "type": "rnn-attn",
+      "seq2seq_encoder": {
+        "type": "lstm",
+        "input_size": input_size,
+        "hidden_size": hidden_size,
+        "num_layers": num_layers,
+        "dropout": rnn_dropout,
+        "bidirectional": bidirectional
       },
-      "num_layers": num_layers,
+      "attention": {
+        "type": "additive",
+        "vector_dim": hidden_size * 2,
+        "matrix_dim": hidden_size * 2
+      }
     },
     "dropout": dropout
   },
@@ -109,7 +86,12 @@ local weight_decay = 0.0005;
       "factor": 0.5,
       "mode": "max",
       "patience": 2
-    }
+    },
+    "callbacks": [
+      {
+        "type": "tensorboard"
+      }
+    ]
   },
   "evaluate_on_test": true
 }

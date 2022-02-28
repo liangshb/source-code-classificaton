@@ -557,30 +557,8 @@
               createSentenceElement(grads_tokens[i], statements_tokens[i])
             );
           }
-          // var htmlResults =
-          //   "<pre>" +
-          //   JSON.stringify(JSON.parse(xhr.responseText), null, 2) +
-          //   "</pre>";
-          // document.getElementById("output2").innerHTML = htmlResults;
         }
       };
-      // data["tokens"] = "kwkw ok ???\nok ?? haha\n??? kwkw ok";
-      // const statement_list = document.getElementById("statement_list");
-      // const grads = [
-      //   [0.1, 0.2, 0, 3],
-      //   [0.0, 0.1, 0.0],
-      //   [0.1, 0.1, 0.1]
-      // ];
-      // let statements = data["tokens"].split("\n");
-      // let statements_tokens = [];
-      // for (let i = 0; i < statements.length; i++) {
-      //   statements_tokens.push(statements[i].split(" "));
-      // }
-      // for (let i = 0; i < statements_tokens.length; i++) {
-      //   statement_list.appendChild(
-      //     createSentenceElement(grads[i], statements_tokens[i])
-      //   );
-      // }
       xhr.send(JSON.stringify(data));
     }
     function attacker() {

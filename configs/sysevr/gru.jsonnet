@@ -10,10 +10,10 @@ local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
 local input_size = embedding_dim;
-local hidden_size = 100;
-local num_layers = 2;
+local hidden_size = 128;
+local num_layers = 1;
 local bidirectional = true;
-local rnn_dropout = 0.1;
+local rnn_dropout = 0.0;
 local dropout = 0.1;
 
 // train
@@ -78,7 +78,12 @@ local weight_decay = 0.0005;
       "factor": 0.5,
       "mode": "max",
       "patience": 2
-    }
+    },
+    "callbacks": [
+      {
+        "type": "tensorboard"
+      }
+    ]
   },
   "evaluate_on_test": true
 }

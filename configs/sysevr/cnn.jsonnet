@@ -9,7 +9,7 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local num_filters = 200;
+local num_filters = 128;
 local ngram_filter_sizes = [5, 6, 7, 8];
 local dropout = 0.1;
 
@@ -26,7 +26,7 @@ local weight_decay = 0.0005;
         "namespace": "tokens"
       }
     },
-    "tokens_key": tokens_key,
+    "tokens_key": tokens_key
   },
   "vocabulary": {
     "type": "from_instances",
@@ -73,7 +73,12 @@ local weight_decay = 0.0005;
       "factor": 0.5,
       "mode": "max",
       "patience": 2
-    }
+    },
+    "callbacks": [
+      {
+        "type": "tensorboard"
+      }
+    ]
   },
   "evaluate_on_test": true
 }
