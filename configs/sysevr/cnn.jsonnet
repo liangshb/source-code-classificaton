@@ -9,8 +9,9 @@ local test_data_path = "data/sysevr/%s/test" % [dataset];
 local tokens_key = "merged-tokens-sym";
 local min_count = {"tokens": 1};
 local embedding_dim = 64;
-local num_filters = 128;
+local num_filters = 50;
 local ngram_filter_sizes = [5, 6, 7, 8];
+local output_dim = 50;
 local dropout = 0.1;
 
 // train
@@ -50,6 +51,7 @@ local weight_decay = 0.0005;
       "embedding_dim": embedding_dim,
       "num_filters": num_filters,
       "ngram_filter_sizes": ngram_filter_sizes,
+      "output_dim": output_dim
     },
     "dropout": dropout
   },
