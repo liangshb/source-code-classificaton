@@ -1,4 +1,4 @@
-local batch_size = 128;
+local batch_size = 256;
 local num_epochs = 100;
 local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];

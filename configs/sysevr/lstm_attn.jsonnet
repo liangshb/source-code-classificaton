@@ -1,4 +1,4 @@
-local batch_size = 128;
+local batch_size = 256;
 local num_epochs = 100;
 local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
@@ -15,6 +15,9 @@ local num_layers = 1;
 local bidirectional = true;
 local rnn_dropout = 0.0;
 local dropout = 0.1;
+
+local type = "word2vec";
+local pretrained_file = "data/sysevr/%s/embedding/%s_%s_%s.txt" % [dataset, type, embedding_dim, tokens_key];
 
 // train
 local lr = 0.002;
@@ -50,13 +53,12 @@ local weight_decay = 0.0005;
     },
     "encoder": {
       "type": "rnn-attn",
-      "seq2seq_encoder": {
-        "type": "lstm",
+      "rnn_encoder": {
+        "type": "blstm",
         "input_size": input_size,
         "hidden_size": hidden_size,
         "num_layers": num_layers,
         "dropout": rnn_dropout,
-        "bidirectional": bidirectional
       },
       "attention": {
         "type": "additive",

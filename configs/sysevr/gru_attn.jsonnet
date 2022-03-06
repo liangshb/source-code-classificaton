@@ -1,4 +1,4 @@
-local batch_size = 128;
+local batch_size = 256;
 local num_epochs = 100;
 local dataset = "Array_usage";
 local train_data_path = "data/sysevr/%s/train" % [dataset];
@@ -49,8 +49,8 @@ local weight_decay = 0.0005;
       }
     },
     "encoder": {
-      "type": "rnn-attn",
-      "seq2seq_encoder": {
+      "type": "rnn-attn-induction",
+      "rnn_encoder": {
         "type": "gru",
         "input_size": input_size,
         "hidden_size": hidden_size,
@@ -58,11 +58,7 @@ local weight_decay = 0.0005;
         "dropout": rnn_dropout,
         "bidirectional": bidirectional
       },
-      "attention": {
-        "type": "additive",
-        "vector_dim": hidden_size * 2,
-        "matrix_dim": hidden_size * 2
-      }
+      attn_dim: hidden_size
     },
     "dropout": dropout
   },

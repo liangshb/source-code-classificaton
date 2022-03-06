@@ -6,7 +6,7 @@ from allennlp.commands import main
 
 
 def debug():
-    config_file = "configs/codexglue/cnn.jsonnet"
+    config_file = "configs/sysevr/lstm_attn.jsonnet"
     overrides = json.dumps({"trainer": {"cuda_device": -1}})
 
     with tempfile.TemporaryDirectory() as serialization_dir:
