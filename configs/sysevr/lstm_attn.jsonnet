@@ -47,7 +47,8 @@ local weight_decay = 0.0005;
       "token_embedders": {
         "tokens": {
           "type": "embedding",
-          "embedding_dim": embedding_dim
+          "embedding_dim": embedding_dim,
+          "pretrained_file": pretrained_file
         }
       }
     },
@@ -74,7 +75,7 @@ local weight_decay = 0.0005;
   },
   "trainer": {
     "num_epochs": num_epochs,
-    "patience": 10,
+    "patience": 15,
     "grad_norm": 5.0,
     "validation_metric": ["+mcc", "+auc", "+f1"],
     "optimizer": {
@@ -87,7 +88,8 @@ local weight_decay = 0.0005;
       "type": "reduce_on_plateau",
       "factor": 0.5,
       "mode": "max",
-      "patience": 2
+      "patience": 5,
+      "min_lr": 0.00001
     },
     "callbacks": [
       {
